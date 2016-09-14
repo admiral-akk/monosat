@@ -6,37 +6,13 @@
 #include "GeometryTypes.h"
 #include <stdio.h>
 #include <limits.h>
+#include <boost/rational.hpp>
 
 /**
  * Stores our solid, and answers predicates across it.
  */
 
- struct Rational 
- {
- 	long p, q;
- 	Rational(long p1, long q1) {
- 		p = p1;
- 		q = q1;
- 	}
-
- 	Rational& operator*(const Rational& a) const {
- 		return Rational(p*a.p,q*a.q);
- 	}
-
- 	Rational& operator+(const Rational& a) const {
- 		return Rational(p*a.q+q*a.p,q*a.q);
- 	}
-
- 	Rational& operator-(const Rational& a) const {
- 		return Rational(p*a.q+q*a.p,q*a.q);
- 	}
-
- 	bool operator>(const Rational& a) const {
- 		return p*a.q > q*a.p;
- 	}
- };
-
- template<unsigned int D, class T=Rational>
+ template<unsigned int D, class T=rational>
  enum nodeType { Union, Intersection, Difference, Primative };
  class CSG {
 
@@ -52,10 +28,13 @@
  	// Map from predicate name (int) to predicate.
  	std::map<int, PointContains> pointPredicateMap;
 
+ 	// Map from boolean name (int) to node.
+ 	std::map<int, Node*> boolSwitchMap;
+
  	struct Point 
  	{
- 		int x, y;
- 		Point(int x1, int y1) {
+ 		T x, y;
+ 		Point(T x1, T y1) {
  			x = x1;
  			y = y1;
  		}
@@ -68,7 +47,7 @@
  			return Point(x-a.x,y-a.y);
  		}
 
- 		long operator*(const Point& a) const {
+ 		T operator*(const Point& a) const {
  			return x*a.y - y*a.x;
  		}
 
@@ -79,23 +58,23 @@
 	// A line segment is defined by two endpoints. If direction is relevant, it goes from (x1, y1) to (x2, y2).
  	struct LineSegment
  	{
- 		LineSegment(int x1, int y1, int x2, int y2) {
+ 		LineSegment(T x1, T y1, T x2, T y2) {
  			start = Point(x1,y1);
  			end = Point(x2,y2);
  		}
  		Point start, end;
  	};
-	// A segment node is defined by two rational endpoints, r1/q1 and r2/q2.
- 	struct SegmentNode
+	// A LineSegmentNode defines the intersection of a given ray with the solid.
+	struct LineSegmentNode
  	{
  		T start, end;
- 		LineSegment(long r1, long q1, long r2, long q2) {
- 			start = T(r1,q1);
- 			end = T(r2,q2);
+ 		LineSegmentNode* next;
+ 		LineSegment(T begin, T finish) {
+ 			start = begin;
+ 			end = finish;
+ 			next = NULL;
  		}
- 		SegmentNode* next;
  	};
-
  	struct Primative
  	{
 		// The points of the convex primative, in counter-clockwise order.
@@ -105,13 +84,13 @@
  	// BoundingBox is defined by the 4 axis-aligned lines. Left and right are the x bounds, and bottom and top are the y bounds.
  	struct BoundingBox
  	{
- 		int left, right, top, bottom;
+ 		T left, right, top, bottom;
 
  		bool operator==(const BoundingBox& b) const {
  			return left == b.left && right == b.right && top == b.top && bottom == b.bottom;
  		}
 
- 		BoundingBox(int leftBound, int rightBound, int lowerBound, int upperBound) {
+ 		BoundingBox(T leftBound, T rightBound, T lowerBound, T upperBound) {
  			left = leftBound;
  			right = rightBound;
  			bottom = lowerBound;
@@ -134,39 +113,45 @@
  		Node* parent;
 
  	private:
+ 		// We hide these so that we don't have to overwrite them when the Active bool is flipped.
 		// Maps from predicate name to boolean.
  		std::map<int,bool> pointContainment;
+ 		// Maps from predicate name to line segment.
+ 		std::map<int,LineSegmentNode*> pointContainment;
  		BoundingBox box;
 
  	public:
- 		int getBoundingBoxLeft() {
+ 		T getBoundingBoxLeft() {
  			return active ? box.left : MAX_INT;
  		}
- 		int getBoundingBoxRight() {
+ 		T getBoundingBoxLeft() {
+ 			return active ? box.left : MAX_INT;
+ 		}
+ 		T getBoundingBoxRight() {
  			return active ? box.right : MIN_INT;
  		}
- 		int getBoundingBoxTop() {
+ 		T getBoundingBoxTop() {
  			return active ? box.top : MIN_INT;
  		}
- 		int getBoundingBoxBottom() {
+ 		T getBoundingBoxBottom() {
  			return active ? box.bottom : MAX_INT;
  		}
- 		int getBoundingBox() {
+ 		T getBoundingBox() {
  			return active ? box : BoundingBox(MAX_INT,MIN_INT,MAX_INT,MIN_INT);
  		}
  		void setBoundingBox(BoundingBox boundingBox) {
  			box = boundingBox;
  		}
- 		void setBoundingBox(int leftBound, int rightBound, int lowerBound, int upperBound) {
+ 		void setBoundingBox(T leftBound, T rightBound, T lowerBound, T upperBound) {
  			box = BoundingBox(leftBound,rightBound,lowerBound,upperBound);
  		}
- 		bool checkIfPredicateContained(int index) {
+ 		bool checkIfPredicateContained(T index) {
  			return pointContainment.count(index);
  		}
- 		bool getPredicate(int index) {
+ 		bool getPointPredicate(T index) {
  			return active ? pointContainment[index] : false;
  		}
- 		void setPredicate(int index, bool val) {
+ 		void setPointPredicate(T index, bool val) {
  			if (pointContainment.count(index)) 
  				pointContainment.erase(index)
  			pointContainment.emplace(index,val);
@@ -177,6 +162,120 @@
  public:
 
  private:
+ 	
+	//
+	// Point Containment
+	//
+
+	//
+	// Initialization
+	//
+
+ 	bool leftTurn(Point p1, Point p2, Point p3) {
+ 		return (p2-p1)*(p3-p1) >= 0;
+ 	}
+
+ 	bool contains(Point p, Primative* shape) {
+ 		for (int i = 0; i < shape.size(); i++) {
+ 			if (!leftTurn(shape.vertices[i],shape.vertices[(i+1) % shape.size()],p))
+ 				return false;	
+ 		}
+ 		return true;
+ 	}
+
+ 	bool contains(Point p, BoundingBox box) {
+ 		return p.x >= box.left && p.x <= box.right && p.y >= box.bottom && p.y <= box.top;
+ 	}
+
+ 	void initializeContainsPoint(int index, Node* node) {
+ 		Point p = pointPredicateMap[index].p;
+
+ 		// If it's outside of the bounding box, the query is simple.
+ 		if (!contains(p,node->getBoundingBox())) {
+ 			node->setPointPredicate(index, false);
+ 			return;
+ 		}
+
+
+ 		switch (node->type) {
+ 			case Union:
+ 			if (!node->left->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->left);
+ 			if (node->left->getPointPredicate(index)) {
+ 				node->setPointPredicate(index, true);
+ 				return;
+ 			}
+ 			if (!node->right->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->right);
+ 			if (node->right->getPointPredicate(index)) {
+ 				node->setPointPredicate(index, true);
+ 				return;
+ 			}
+ 			node->setPointPredicate(index, false);
+ 			return;
+
+ 			case Intersection:
+
+ 			if (!node->left->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->left);
+ 			if (!node->left->getPointPredicate(index)) {
+ 				node->setPointPredicate(index, false);
+ 				return;
+ 			}
+ 			if (!node->right->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->right);
+ 			if (!node->right->getPointPredicate(index)) {
+ 				node->setPointPredicate(index, false);
+ 				return;
+ 			}
+ 			node->setPointPredicate(index, true);
+ 			return;
+
+ 			case Difference:
+
+ 			if (!node->left->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->left);
+ 			if (!(node->left->getPointPredicate(index))) {
+ 				node->setPointPredicate(index, false);
+ 				return;
+ 			}
+ 			if (!node->right->checkIfPredicateContained())
+ 				initializeContainsPoint(index,node->right);
+ 			if (node->right->getPointPredicate(index)) {
+ 				node->setPointPredicate(index, false);
+ 				return;
+ 			}
+ 			node->setPointPredicate(index, true);
+ 			return;
+
+ 			case Primative:
+ 			if (!node->checkIfPredicateContained())
+ 				node->setPointPredicate(index, contains(p,node->primative));
+ 			return;
+
+ 			default:
+ 			perror("(shape->type, Point): HOW DID YOU GET HERE?!\n")
+ 			break;
+ 		}
+ 	}
+
+ 	void initializeContainsPoint(int index) {
+ 		initializeContainsPoint(index,pointPredicateMap[index].node);
+ 	}
+
+	//
+	// Updates
+	//
+
+ 	void updateParentPoint(int index, Node* node) {
+ 		if (!node || !(node->checkIfPredicateContained(index)))
+ 			return;
+ 		bool old = node->getPointPredicate(index);
+ 		initializeContainsPoint(index,node);
+ 		if (old == node->getPointPredicate(index)) 
+ 			return;
+ 		updateParentPoint(index, node->parent);
+ 	} 	
 
 	//
 	// Bounding Box
@@ -211,7 +310,7 @@
  	}
 
  	BoundingBox initializeBoundingBox(Primative* p) {
- 		int leftBound, rightBound, upperBound, lowerBound;
+ 		T leftBound, rightBound, upperBound, lowerBound;
  		leftBound = MAX_INT;
  		rightBound = MIN_INT;
  		lowerBound = MAX_INT;
@@ -226,7 +325,7 @@
  	}
 
  	BoundingBox initializeUnionBoundingBox(Node* left, Node* right) {
- 		int leftBound, rightBound, upperBound, lowerBound;
+ 		T leftBound, rightBound, upperBound, lowerBound;
  		leftBound = std::min(left->getBoundingBoxLeft(),right->getBoundingBoxLeft());
  		rightBound = std::max(left->getBoundingBoxRight(),right->getBoundingBoxRight());
  		lowerBound = std::min(left->getBoundingBoxBottom(),right->bgetBoundingBoxBottom());
@@ -240,7 +339,7 @@
  	}
 
  	BoundingBox initializeIntersectBoundingBox(Node* left, Node* right) {
- 		int leftBound, rightBound, upperBound, lowerBound;
+ 		T leftBound, rightBound, upperBound, lowerBound;
  		leftBound = std::max(left->getBoundingBoxLeft(),right->getBoundingBoxLeft());
  		rightBound = std::min(left->getBoundingBoxRight(),right->getBoundingBoxRight());
  		lowerBound = std::max(left->getBoundingBoxBottom(),right->getBoundingBoxBottom());
@@ -268,186 +367,99 @@
  	void updateParentBoundingBox(Node* node) {
  		if (!node)
  			return;
- 		BoundingBox old = node->box;
+ 		BoundingBox old = node->getBoundingBox();
  		updateNodeBoundingBox(node);
  		if (old == node->getBoundingBox()) 
  			return;
  		updateParentBoundingBox(node->parent);
  	}
 
-	//
-	// Point Containment
-	//
-
-	//
-	// Initialization
-	//
-
- 	bool leftTurn(Point p1, Point p2, Point p3) {
- 		return (p2-p1)*(p3-p1) >= 0;
- 	}
-
- 	bool contains(Point p, Primative* shape) {
- 		for (int i = 0; i < shape.size(); i++) {
- 			if (!leftTurn(shape.vertices[i],shape.vertices[(i+1) % shape.size(),p]))
- 				return false;	
- 		}
- 		return true;
- 	}
-
- 	bool contains(Point p, BoundingBox box) {
- 		return p.x >= box.left && p.x <= box.right && p.y >= box.bottom && p.y <= box.top;
- 	}
-
- 	/*
- 	bool contains(Point p, Node* shape) {
- 		if (!contains(p,shape->box)) 
- 			return false;
- 		switch (shape->type) {
- 			case Union:
- 			if (contains(p,shape->left))
- 				return true;
- 			return contains(p,shape->right);
-
- 			case Intersection:
- 			if (!contains(p,shape->left))
- 				return false;
- 			return !contains(p,shape->right);
-
- 			case Difference:
- 			if (!contains(p,shape->left))
- 				return false;
- 			return !contains(p,shape->right);
-
- 			case Primative:
- 			return contains(p,shape->primative);
-
- 			default:
- 			perror("(shape->type, Point): HOW DID YOU GET HERE?!\n")
- 			break;
- 		}
- 	}
- 	*/
-
- 	void initializeContainsPoint(int index, Node* node) {
- 		Point p = pointPredicateMap[index].p;
-
- 		// If it's outside of the bounding box, the query is simple.
- 		if (!contains(p,node->getBoundingBox())) {
- 			node->setPredicate(index, false);
- 			return;
- 		}
-
-
- 		switch (node->type) {
- 			case Union:
- 			initializeContainsPoint(index,node->left);
- 			if (node->getPredicate(index)) {
- 				node->setPredicate(index, true);
-
- 				return;
- 			}
- 			initializeContainsPoint(index,node->right);
- 			if (node->getPredicate(index)) {
- 				node->setPredicate(index, true);
- 				return;
- 			}
- 			node->setPredicate(index, false);
- 			return;
-
- 			case Intersection:
-
- 			initializeContainsPoint(index,node->left);
- 			if (node->getPredicate(index)) {
- 				node->setPredicate(index, false);
- 				return;
- 			}
- 			initializeContainsPoint(index,node->right);
- 			if (node->getPredicate(index)) {
- 				node->setPredicate(index, false);
- 				return;
- 			}
- 			node->setPredicate(index, true);
- 			return;
-
- 			case Difference:
-
- 			initializeContainsPoint(index,node->left);
- 			if (!(node->getPredicate(index))) {
- 				node->setPredicate(index, false);
- 				return;
- 			}
- 			initializeContainsPoint(index,node->right);
- 			if (node->getPredicate(index)) {
- 				node->setPredicate(index, false);
- 				return;
- 			}
- 			node->setPredicate(index, true);
- 			return;
-
- 			case Primative:
- 			node->setPredicate(index, contains(p,node->primative));
- 			return;
-
- 			default:
- 			perror("(shape->type, Point): HOW DID YOU GET HERE?!\n")
- 			break;
- 		}
- 	}
-
- 	void initializeContainsPoint(int index) {
- 		initializeContainsPoint(index,pointPredicateMap[index].node);
- 	}
-
-	//
-	// Updates
-	//
-
- 	void updateParentPoint(int index, Node* node) {
- 		if (!node || !(node->checkIfPredicateContained(index)))
- 			return;
- 		bool old = node->getPredicate(index);
- 		initializeContainsPoint(index,node);
- 		if (old == node->getPredicate(index)) 
- 			return;
- 		updateParentBoundingBox(node->parent);
- 	}
-
+/*
 
 	//
 	// Line Segment Containment
 	//
-	/*
 
-	long dotProduct(Point p1, Point p2) {
+	T dotProduct(Point p1, Point p2) {
 		return p1.x*p2.x + p1.y+p2.y;
 	}
 
 	// Followed from here: http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+	// Parameterize r1 with t over [0,1].
+	// Returns the maximum and minimum t values which intersect r2.
+
+	LineSegmentNode* intersects(LineSegment r1, LineSegment r2) {
+		Point p = r1.start;
+		Point r = r1.end - r1.start;
+		Point q = r2.start;
+		Point s = r2.end - r2.start;
+		Point qp = q-p;
+		T rs = r*s;
+		T rLength = dotProduct(r,r);
+		LineSegmentNode* answer;
+		// Parallel
+		if (rs == 0) {
+			// Colinear
+			if (qp*r == 0) {
+				t0 = dotProduct(qp,r)/rLength;
+				t1 = t0+dotProduct(s,r)/rLength; 
+				if (t0 <= 1 && t1 >= 0) {
+					answer = new LineSegmentNode(std::max(t0,0),std::min(t1,1));
+					return answer;
+				}
+			}
+			// Not colinear, or colinear and disjoint.
+			return NULL;
+		} 
+		T t = qp*s/rs;
+		T u = qp*r/rs;
+		// Intersection between the end points.
+		if (0 <= t && t <= 1 && 0 <= u && u <= 1) {
+			answer = new LineSegmentNode(t,t);
+			return answer;
+		}
+		return NULL;
+	}
+
+	LineSegmentNode* intersects(LineSegment r, Primative p) {
+		LineSegmentNode* 
+ 		for (int i = 0; i < shape.size(); i++) {
+ 			LineSegment edge = LineSegment(shape.vertices[i].x, shape.vertices[i].y, shape.vertices[(i+1) % shape.size()].x, shape.vertices[(i+1) % shape.size()].y);
+ 			LineSegmentNode* intersection = intersects(r, edge);
+ 			if (intersection) {
+
+ 			}
+ 		}
+	}
+
+
+	// Followed from here: http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+
 	bool intersects(LineSegment r1, LineSegment r2) {
 		Point p = r1.start;
 		Point r = r1.end - r1.start;
 		Point q = r2.start;
 		Point s = r2.end - r2.start;
 		Point qp = q-p;
-		long rs = r*s;
-		long rLength = dotProduct(r,r);
+		T rs = r*s;
+		T rLength = dotProduct(r,r);
 		// Parallel
 		if (rs == 0) {
 			// Colinear
 			if (qp*r == 0) {
-				t0 = dotProduct(qp,r);
-				t1 = t0+dotProduct(s,r); 
-				if (t0 <= rLength && t1 >= 0)
+				t0 = dotProduct(qp,r)/rLength;
+				t1 = t0+dotProduct(s,r)/rLength; 
+				if (t0 <= 1 && t1 >= 0) {
 					return true;
+				}
 			}
 			// Not colinear, or colinear and disjoint.
 			return false;
 		} 
-		long t = qp*s;
-		long u = qp*r;
+		T t = qp*s/rs;
+		T u = qp*r/rs;
 		// Intersection between the end points.
-		if (0 <= t && t <= rs && 0 <= u && u <= rs) 
+		if (0 <= t && t <= 1 && 0 <= u && u <= 1) 
 			return true;
 		return false;
 	}
@@ -471,27 +483,30 @@
 		return false;
 	}
 
-	SegmentNode* intersects(LineSegment r, Primative* p) {
-
-	}
-
-	SegmentNode* union(SegmentNode* left, SegmentNode* right) {
-
-		if (!left && !right) 
-			return NULL;
-		if (!left)
-			return union(right, left);
-		if (!right) {
-
-		}
-
+	bool intersects(LineSegment r, BoundingBox b) {
+		LineSegment boxEdge = LineSegment(b.x,b.y,b.x+b.xSize,b.y);
+		if (intersects(r,boxEdge))
+			return true;
+		boxEdge = LineSegment(b.x+b.xSize,b.y,b.x+b.xSize,b.y+b.ySize);
+		if (intersects(r,boxEdge))
+			return true;
+		boxEdge = LineSegment(b.x+b.xSize,b.y+b.ySize,b.x,b.y+b.ySize);
+		if (intersects(r,boxEdge))
+			return true;
+		boxEdge = LineSegment(b.x,b.y,b.x,b.y+b.ySize);
+		if (intersects(r,boxEdge))
+			return true;
+		Point endpoint = Point(r.x1,r.y1);
+		if (contains(endpoint,b))
+			return true;
+		return false;
 	}
 
 	// TODO: FIX MEMORY LEAKS!
-	SegmentNode* intersects(LineSegment r, Node* shape) {
-		SegmentNode* raySegments = NULL;
-		SegmentNode* left = NULL;
-		SegmentNode* right = NULL;
+	LineSegmentNode* intersects(LineSegment r, Node* shape) {
+		LineSegmentNode* raySegments = NULL;
+		LineSegmentNode* left = NULL;
+		LineSegmentNode* right = NULL;
 		if (!intersects(p,shape->box)) 
 			return raySegments;
 		if (shape->type == Primative) 
@@ -509,5 +524,22 @@
 				perror("(shape->type, LineSegment): HOW DID YOU GET HERE?!\n")
 				break;
 		}
-	}*/
+	}
+
+	SegmentNode* intersects(LineSegment r, Primative* p) {
+
+	}
+
+	SegmentNode* union(SegmentNode* left, SegmentNode* right) {
+
+		if (!left && !right) 
+			return NULL;
+		if (!left)
+			return union(right, left);
+		if (!right) {
+
+		}
+
+	}
+*/
 #endif CSG_H_
