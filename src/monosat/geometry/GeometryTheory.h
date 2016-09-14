@@ -30,7 +30,7 @@
 #include "monosat/core/Solver.h"
 #include "monosat/core/Config.h"
 #include "GeometryDetector.h"
-#include "PointSet.h"
+#include "CSG.h"
 #include "ConvexHullDetector.h"
 #include "ConvexHullCollisionDetector.h"
 
@@ -55,8 +55,8 @@ public:
 
 	vec<lbool> assigns;
 
-	std::vector<PointSet<D, T> > under_sets;
-	std::vector<PointSet<D, T> > over_sets;
+	std::CSG<D, T> under_csg;
+	std::CSG<D, T> over_csg;
 	struct Assignment {
 		bool isPoint :1;
 		bool assign :1;
