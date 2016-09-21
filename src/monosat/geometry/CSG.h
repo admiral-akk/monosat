@@ -6,22 +6,28 @@
 #include "GeometryTypes.h"
 #include <stdio.h>
 #include <limits.h>
-#include <boost/rational.hpp>
 
 /**
  * Stores our solid, and answers predicates across it.
  */
 
- template<unsigned int D, class T=rational>
- enum nodeType { Union, Intersection, Difference, Primative };
- class CSG {
+
+#define MAX_INT std::numeric_limits<int>::max()
+#define MIN_INT std::numeric_limits<int>::min()
+
+ template<unsigned int D, class T = double> class CSG {
 
  public:
+ 	struct Node;
+ 	struct Polygon;
+ 	struct BoundingBox;
+
+ 	enum nodeType { Union, Intersection, Difference, Primative };
 
  	// Represents point containment predicate
  	struct PointContains
  	{
- 		Point p;
+ 		Point<D,T> p;
  		Node* solid;
  	};
 
@@ -30,7 +36,7 @@
 
  	// Map from boolean name (int) to node.
  	std::map<int, Node*> boolSwitchMap;
-
+/*
  	struct Point 
  	{
  		T x, y;
@@ -69,16 +75,16 @@
  	{
  		T start, end;
  		LineSegmentNode* next;
- 		LineSegment(T begin, T finish) {
+ 		LineSegmentNode(T begin, T finish) {
  			start = begin;
  			end = finish;
  			next = NULL;
  		}
- 	};
- 	struct Primative
+ 	};*/
+ 	struct Polygon
  	{
-		// The points of the convex primative, in counter-clockwise order.
- 		std::vector<Point> vertices;
+		// The points of the convex polygon, in counter-clockwise order.
+ 		std::vector<Point<D,T>> vertices;
  	};
 
  	// BoundingBox is defined by the 4 axis-aligned lines. Left and right are the x bounds, and bottom and top are the y bounds.
@@ -107,7 +113,7 @@
 		// If false, this node is simply the null set.
  		bool active;
 		// If it's a leaf, p will point to the primative.
- 		Primative* p;
+ 		Polygon* p;
  		Node* left;
  		Node* right;
  		Node* parent;
@@ -117,13 +123,10 @@
 		// Maps from predicate name to boolean.
  		std::map<int,bool> pointContainment;
  		// Maps from predicate name to line segment.
- 		std::map<int,LineSegmentNode*> pointContainment;
+ 		// std::map<int,LineSegmentNode*> pointContainment;
  		BoundingBox box;
 
  	public:
- 		T getBoundingBoxLeft() {
- 			return active ? box.left : MAX_INT;
- 		}
  		T getBoundingBoxLeft() {
  			return active ? box.left : MAX_INT;
  		}
@@ -153,7 +156,7 @@
  		}
  		void setPointPredicate(T index, bool val) {
  			if (pointContainment.count(index)) 
- 				pointContainment.erase(index)
+ 				pointContainment.erase(index);
  			pointContainment.emplace(index,val);
  		}
 
@@ -171,11 +174,11 @@
 	// Initialization
 	//
 
- 	bool leftTurn(Point p1, Point p2, Point p3) {
+ 	bool leftTurn(Point<2,T> p1, Point<2,T> p2, Point<2,T> p3) {
  		return (p2-p1)*(p3-p1) >= 0;
  	}
 
- 	bool contains(Point p, Primative* shape) {
+ 	bool contains(Point<2,T> p, Polygon* shape) {
  		for (int i = 0; i < shape.size(); i++) {
  			if (!leftTurn(shape.vertices[i],shape.vertices[(i+1) % shape.size()],p))
  				return false;	
@@ -183,12 +186,12 @@
  		return true;
  	}
 
- 	bool contains(Point p, BoundingBox box) {
+ 	bool contains(Point<2,T> p, BoundingBox box) {
  		return p.x >= box.left && p.x <= box.right && p.y >= box.bottom && p.y <= box.top;
  	}
 
  	void initializeContainsPoint(int index, Node* node) {
- 		Point p = pointPredicateMap[index].p;
+ 		Point<2,T> p = pointPredicateMap[index].p;
 
  		// If it's outside of the bounding box, the query is simple.
  		if (!contains(p,node->getBoundingBox())) {
@@ -250,11 +253,11 @@
 
  			case Primative:
  			if (!node->checkIfPredicateContained())
- 				node->setPointPredicate(index, contains(p,node->primative));
+ 				node->setPointPredicate(index, contains(p,node->p));
  			return;
 
  			default:
- 			perror("(shape->type, Point): HOW DID YOU GET HERE?!\n")
+ 			perror("(shape->type, Point): HOW DID YOU GET HERE?!\n");
  			break;
  		}
  	}
@@ -286,9 +289,9 @@
 	//
 
  	void updateNodeBoundingBox(Node* node) {
- 		switch (shape->type) {
+ 		switch (node->type) {
  			case Primative:
- 			node->setBoundingBox(initializeBoundingBox(node->primative));
+ 			node->setBoundingBox(initializeBoundingBox(node->p));
  			break;
 
  			case Union:
@@ -304,12 +307,12 @@
  			break;
 
  			default:
- 			perror("HOW DID YOU GET HERE?!\n")
+ 			perror("HOW DID YOU GET HERE?!\n");
  			break;
  		}
  	}
 
- 	BoundingBox initializeBoundingBox(Primative* p) {
+ 	BoundingBox initializeBoundingBox(Polygon* p) {
  		T leftBound, rightBound, upperBound, lowerBound;
  		leftBound = MAX_INT;
  		rightBound = MIN_INT;
@@ -353,7 +356,7 @@
 
  	}
  	void initializeBoundingBox(Node* node) {
- 		if (shape->type != Primative) {
+ 		if (node->type != Primative) {
  			initializeBoundingBox(node->left);
  			initializeBoundingBox(node->right);
  		}
