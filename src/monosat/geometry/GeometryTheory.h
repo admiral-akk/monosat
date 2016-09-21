@@ -1,17 +1,13 @@
 /****************************************************************************************[Solver.h]
  The MIT License (MIT)
-
  Copyright (c) 2014, Sam Bayless
-
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
  associated documentation files (the "Software"), to deal in the Software without restriction,
  including without limitation the rights to use, copy, modify, merge, publish, distribute,
  sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
-
  The above copyright notice and this permission notice shall be included in all copies or
  substantial portions of the Software.
-
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
  NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
@@ -29,10 +25,11 @@
 #include "monosat/utils/System.h"
 #include "monosat/core/Solver.h"
 #include "monosat/core/Config.h"
-#include "GeometryDetector.h"
 #include "CSG.h"
-#include "ConvexHullDetector.h"
-#include "ConvexHullCollisionDetector.h"
+//#include "GeometryDetector.h"
+//#include "PointSet.h"
+//#include "ConvexHullDetector.h"
+//#include "ConvexHullCollisionDetector.h"
 
 #ifndef NDEBUG
 #include <cstdio>
@@ -44,6 +41,8 @@ template<unsigned int D, class T = double>
 class GeometryTheorySolver: public Theory {
 	
 public:
+
+ 	enum varType { ShapeBool, PointContainment };
 	
 	double rnd_seed;
 
@@ -55,8 +54,8 @@ public:
 
 	vec<lbool> assigns;
 
-	std::CSG<D, T> under_csg;
-	std::CSG<D, T> over_csg;
+	CSG<D, T> under_set;
+	CSG<D, T> over_set;
 	struct Assignment {
 		bool isPoint :1;
 		bool assign :1;
@@ -74,12 +73,12 @@ public:
 	vec<Assignment> trail;
 	vec<int> trail_lim;
 
-	std::vector<std::vector<GeometryDetector*>> pointsetDetectors;
-	std::vector<GeometryDetector*> detectors;
-	std::vector<GeometryDetector*> detectors_rnd;
-	std::vector<ConvexHullDetector<D, T>*> convexHullDetectors;
+	//std::vector<std::vector<GeometryDetector*>> pointsetDetectors;
+	//std::vector<GeometryDetector*> detectors;
+	//std::vector<GeometryDetector*> detectors_rnd;
+	//std::vector<ConvexHullDetector<D, T>*> convexHullDetectors;
 	//std::vector<GeometricSteinerDetector<D,T>*> steinerTreeDetectors;
-	ConvexHullCollisionDetector<D, T>* collisionDetector = nullptr;
+	//ConvexHullCollisionDetector<D, T>* collisionDetector = nullptr;
 
 	vec<int> marker_map;
 
@@ -145,15 +144,15 @@ public:
 	}
 	
 	~GeometryTheorySolver() {
-		for (auto * d : detectors) {
-			delete (d);
-		}
+		//for (auto * d : detectors) {
+		//	delete (d);
+		//}
 	}
 	
 	void printStats(int detailLevel) {
 		if (detailLevel > 0) {
-			for (GeometryDetector * d : detectors)
-				d->printStats();
+			//for (GeometryDetector * d : detectors)
+			//	d->printStats();
 		}
 		
 		printf("Graph stats:\n");
@@ -176,9 +175,9 @@ public:
 				(stats_reason_time) / ((double) stats_num_reasons + 1));
 		fflush(stdout);
 	}
-	inline int nPointSets() const {
-		return under_sets.size();
-	}
+	//inline int nPointSets() const {
+	//	return under_sets.size();
+	//}
 	inline int getTheoryIndex() {
 		return theory_index;
 	}
@@ -216,13 +215,14 @@ public:
 		assert(vars[v].isPoint);
 		return v;
 	}
+	/*
 	inline Var getPointVar(int pointset, int pointsetIndex) {
 		int pointID = under_sets[pointset][pointsetIndex].getID();
 		Var v = points[pointID].var;
 		assert(v < vars.size());
 		assert(vars[v].isPoint);
 		return v;
-	}
+	}*/
 	
 	void makeEqual(Lit l1, Lit l2) {
 		Lit o1 = toSolver(l1);
@@ -285,9 +285,9 @@ public:
 			S->setTheoryVar(solverVar, getTheoryIndex(), v);
 			assert(toSolver(v) == solverVar);
 		}
-		if (!isPoint && detector >= 0)
-			detectors[detector]->addVar(v);
-		return v;
+		//if (!isPoint && detector >= 0)
+		//	detectors[detector]->addVar(v);
+		//return v;
 	}
 	inline int level(Var v) {
 		return S->level(toSolver(v));
@@ -417,17 +417,16 @@ public:
 				if (e.isPoint) {
 					assert(dbg_value(e.var)==value(e.var));
 					int point_num = getPointID(e.var); //e.var-min_point_var;
-					int pointSet = points[point_num].pointset;
-					int pointsetIndex = getPointsetIndex(point_num);
 					if (e.assign) {
-						under_sets[pointSet].disablePoint(pointsetIndex);
+						under_set.set
+						//under_sets[pointSet].disablePoint(pointsetIndex);
 					} else {
-						over_sets[pointSet].enablePoint(pointsetIndex);
+						//over_sets[pointSet].enablePoint(pointsetIndex);
 						//assert(over.hasPoint(e.pointID));
 					}
 				} else {
 					//This is a reachability literal
-					detectors[getDetector(e.var)]->unassign(mkLit(e.var, !e.assign));
+					//detectors[getDetector(e.var)]->unassign(mkLit(e.var, !e.assign));
 				}
 				assigns[e.var] = l_Undef;
 				changed = true;
@@ -455,6 +454,7 @@ public:
 		double start = rtime(1);
 		
 		dbg_full_sync();
+		/*
 		for (int i = 0; i < detectors.size(); i++) {
 			GeometryDetector * r = detectors[i];
 			Lit l = r->decide();
@@ -462,7 +462,7 @@ public:
 				stats_decisions++;
 				return toSolver(l);
 			}
-		}
+		}*/
 		stats_decision_time += rtime(1) - start;
 		return lit_Undef;
 	}
@@ -483,15 +483,15 @@ public:
 				assert(assigns[e.var]!=l_Undef);
 				assigns[e.var] = l_Undef;
 				if (e.assign) {
-					under_sets[pointSet].disablePoint(pointsetIndex);
+					//under_sets[pointSet].disablePoint(pointsetIndex);
 				} else {
-					over_sets[pointSet].enablePoint(pointsetIndex);
+					//over_sets[pointSet].enablePoint(pointsetIndex);
 					
 				}
 			} else {
 
 				assigns[e.var] = l_Undef;
-				detectors[getDetector(e.var)]->unassign(mkLit(e.var, !e.assign));
+				//detectors[getDetector(e.var)]->unassign(mkLit(e.var, !e.assign));
 			}
 		}
 		
@@ -528,8 +528,8 @@ public:
 		double start = rtime(1);
 		backtrackUntil(p);
 		
-		assert(d < detectors.size());
-		detectors[d]->buildReason(p, reason, marker);
+		//assert(d < detectors.size());
+		//detectors[d]->buildReason(p, reason, marker);
 		toSolver(reason);
 		double finish = rtime(1);
 		stats_reason_time += finish - start;
@@ -567,33 +567,32 @@ public:
 	
 	/*	int getPointID(Var v){
 	 assert(v>= min_point_var && v<min_point_var+points.size());
-
 	 //this is an point assignment
 	 int point_num = v-min_point_var;
 	 return point_num;
 	 }*/
 
 	void preprocess() {
-		for (int i = 0; i < detectors.size(); i++) {
-			detectors[i]->preprocess();
-		}
+		//for (int i = 0; i < detectors.size(); i++) {
+		//	detectors[i]->preprocess();
+		//}
 	}
 	void setLiteralOccurs(Lit l, bool occurs) {
 		if (isPointVar(var(l))) {
 			//don't do anything
 		} else {
 			//this is a graph property detector var
-			if (!sign(l) && vars[var(l)].occursPositive != occurs)
-				detectors[getDetector(var(l))]->setOccurs(l, occurs);
-			else if (sign(l) && vars[var(l)].occursNegative != occurs)
-				detectors[getDetector(var(l))]->setOccurs(l, occurs);
+			//if (!sign(l) && vars[var(l)].occursPositive != occurs)
+			//	detectors[getDetector(var(l))]->setOccurs(l, occurs);
+			//else if (sign(l) && vars[var(l)].occursNegative != occurs)
+			//	detectors[getDetector(var(l))]->setOccurs(l, occurs);
 		}
 		
 	}
 	void printSolution() {
-		for (GeometryDetector* d : detectors) {
-			d->printSolution();
-		}
+		//for (GeometryDetector* d : detectors) {
+		//	d->printSolution();
+		//}
 	}
 	void enqueueTheory(Lit l) {
 		Var v = var(l);
@@ -623,7 +622,6 @@ public:
 		 #ifdef RECORD
 		 if(under.outfile){
 		 fprintf(under.outfile,"enqueue %d\n", dimacs(l));
-
 		 fprintf(under.outfile,"\n");
 		 fflush(under.outfile);
 		 }
@@ -654,16 +652,16 @@ public:
 			Assignment e = trail.last();
 			int pointSet = points[pointID].pointset;
 			if (!sign(l)) {
-				under_sets[pointSet].enablePoint(pointsetIndex);
+			//	under_sets[pointSet].enablePoint(pointsetIndex);
 			} else {
-				over_sets[pointSet].disablePoint(pointsetIndex);
+			//	over_sets[pointSet].disablePoint(pointsetIndex);
 			}
 			
 		} else {
 			
 			trail.push(Assignment(false, !sign(l), 0, v));
 			//this is an assignment to a non-point atom. (eg, a reachability assertion)
-			detectors[getDetector(var(l))]->assign(l);
+			//detectors[getDetector(var(l))]->assign(l);
 		}
 		
 	}
@@ -677,7 +675,6 @@ public:
 		 for(int i = 0;i<vars.size();i++){
 		 if(value(i)!= dbg_value(i)){
 		 cout << "Error! Theory unsolved or out of sync: theory var " << i;
-
 		 if(isPointVar(i)){
 		 cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
 		 }else{
@@ -685,7 +682,6 @@ public:
 		 }
 		 cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
 		 cout<< "!\n";
-
 		 }
 		 }
 		 }*/
@@ -708,7 +704,7 @@ public:
 		
 		while (toPropagate.size()) {
 			int pointset = toPropagate.last();
-			
+			/*
 			for (GeometryDetector * d : pointsetDetectors[pointset]) {
 				assert(conflict.size() == 0);
 				bool r = d->propagate(conflict);
@@ -718,16 +714,16 @@ public:
 					propagationtime += rtime(1) - startproptime;
 					return false;
 				}
-			}
+			}*/
 			toPropagate.pop();
 			requiresPropagation[pointset] = false;
-			under_sets[pointset].clearChanged();
-			over_sets[pointset].clearChanged();
+			//under_sets[pointset].clearChanged();
+			//over_sets[pointset].clearChanged();
 			
-			under_sets[pointset].clearHistory();
-			over_sets[pointset].clearHistory();
+			//under_sets[pointset].clearHistory();
+			//over_sets[pointset].clearHistory();
 		}
-		
+		/*
 		if (collisionDetector) {
 			bool r = collisionDetector->propagate(conflict);
 			if (!r) {
@@ -736,7 +732,7 @@ public:
 				propagationtime += rtime(1) - startproptime;
 				return false;
 			}
-		}
+		}*/
 		
 #ifndef NDEBUG
 		/*for(int i = 0;i<detectors.size();i++){
@@ -752,7 +748,6 @@ public:
 		 for(int i = 0;i<vars.size();i++){
 		 if(value(i)!= dbg_value(i)){
 		 cout << "Error! Theory unsolved or out of sync: theory var " << i;
-
 		 if(isPointVar(i)){
 		 cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
 		 }else{
@@ -760,7 +755,6 @@ public:
 		 }
 		 cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
 		 cout<< "!\n";
-
 		 }
 		 }
 		 for(int i = 0;i<detectors.size();i++){
@@ -780,14 +774,14 @@ public:
 	;
 
 	bool solveTheory(vec<Lit> & conflict) {
-		
+		/*
 		for (int i = 0; i < nPointSets(); i++) {
 			//Just to be on the safe side, force all detectors to propagate... this shouldn't really be required.
 			if (!requiresPropagation[i]) {
 				toPropagate.push(i);
 				requiresPropagation[i] = true;
 			}
-		}
+		}*/
 		bool ret = propagateTheory(conflict);
 		//Under normal conditions, this should _always_ hold (as propagateTheory should have been called and checked by the parent solver before getting to this point).
 		assert(ret);
@@ -803,15 +797,15 @@ public:
 		dbg_full_sync();
 		for (int i = 0; i < vars.size(); i++) {
 			if (value(i) != dbg_value(i)) {
-				cout << "Error! Theory unsolved or out of sync: theory var " << i;
+				std::cout << "Error! Theory unsolved or out of sync: theory var " << i;
 				
 				if (isPointVar(i)) {
-					cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
+					std::cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
 				} else {
-					cout << " for detector " << getDetector(i);
+					std::cout << " for detector " << getDetector(i);
 				}
-				cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
-				cout << "!\n";
+				std::cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
+				std::cout << "!\n";
 				return false;
 			}
 		}
@@ -821,7 +815,7 @@ public:
 			PointData & e = points[i];
 			lbool val = value(e.var);
 			if (val == l_Undef) {
-				cout << "Error! Theory unsolved!\n";
+				std::cout << "Error! Theory unsolved!\n";
 				return false;
 			}
 			int pointset = e.pointset;
@@ -832,39 +826,41 @@ public:
 				 if(!over.haspoint(e.from,e.to)){
 				 return false;
 				 }*/
+				 /*
 				if (!under_sets[pointset].pointEnabled(e.pointset_index)) {
-					cout << "Error! Theory out of sync!\n";
+					std::cout << "Error! Theory out of sync!\n";
 					return false;
 				}
 				if (!over_sets[pointset].pointEnabled(e.pointset_index)) {
-					cout << "Error! Theory out of sync!\n";
+					std::cout << "Error! Theory out of sync!\n";
 					return false;
-				}
+				}*/
 			} else {
 				/*if(g.haspoint(e.from,e.to)){
 				 return false;
 				 }*/
+				 /*
 				if (under_sets[pointset].pointEnabled(e.pointset_index)) {
-					cout << "Error! Theory out of sync!\n";
+					std::cout << "Error! Theory out of sync!\n";
 					return false;
 				}
 				if (over_sets[pointset].pointEnabled(e.pointset_index)) {
-					cout << "Error! Theory out of sync!\n";
+					std::cout << "Error! Theory out of sync!\n";
 					return false;
-				}
+				}*/
 				/*if(over.haspoint(e.from,e.to)){
 				 return false;
 				 }*/
 
 			}
 			
-		}
+		}/*
 		for (int i = 0; i < detectors.size(); i++) {
 			if (!detectors[i]->checkSatisfied()) {
-				cout << "Error! Detector " << i << " unsatisfied\n";
+				std::cout << "Error! Detector " << i << " unsatisfied\n";
 				return false;
 			}
-		}
+		}*/
 		return true;
 	}
 	
@@ -923,13 +919,13 @@ public:
 		points[index].point.setID(index);
 		points[index].id = index;
 		points[index].pointset = pointSet;
-		while (under_sets.size() <= pointSet) {
-			under_sets.push_back(under_sets.size());
-		}
-		while (over_sets.size() <= pointSet) {
-			over_sets.push_back(over_sets.size());
-		}
-		
+		//while (under_sets.size() <= pointSet) {
+		//	under_sets.push_back(under_sets.size());
+		//}
+		//while (over_sets.size() <= pointSet) {
+		//	over_sets.push_back(over_sets.size());
+		//}
+		/*
 		int pointsetIndex = under_sets[pointSet].addPoint(points[index].point);
 		points[index].pointset_index = pointsetIndex;
 		under_sets[pointSet].disablePoint(pointsetIndex);
@@ -938,10 +934,10 @@ public:
 		over_sets[pointSet].enablePoint(pointsetIndex);
 		if (pointsetDetectors.size() < nPointSets()) {
 			pointsetDetectors.resize(nPointSets());
-		}
+		}*/
 		
 		//anyRequiresPropagation=true;
-		requiresPropagation.growTo(nPointSets(), false);
+		//requiresPropagation.growTo(nPointSets(), false);
 		if (!requiresPropagation[pointSet]) {
 			requiresPropagation[pointSet] = true;
 			toPropagate.push(pointSet);
@@ -953,7 +949,7 @@ public:
 		if (!S->okay())
 			return;
 	}
-	
+	/*
 	void convexHullArea(int pointSet, T areaGreaterThan, Var outerVar) {
 		if (convexHullDetectors.size() < nPointSets())
 			convexHullDetectors.resize(nPointSets());
@@ -966,6 +962,7 @@ public:
 			detectors.push_back(convexHull);
 		}
 		convexHullDetectors[pointSet]->addAreaDetectorLit(areaGreaterThan, outerVar);
+	
 	}
 	
 	void convexHullContains(int pointSet, Point<D, T> point, Var outerVar) {
@@ -996,7 +993,7 @@ public:
 		
 		convexHullDetectors[pointSet]->addPointOnHullLit(pointIndex, outerVar);
 	}
-	
+	*/
 	/*	void convexHullIntersectsLine(int pointSet,Point<D,T> p,Point<D,T> q,Var outerVar){
 	 convexHullDetectors.growTo(nPointSets(),nullptr);
 	 if(!convexHullDetectors[pointSet]){
@@ -1005,10 +1002,9 @@ public:
 	 convexHullDetectors[pointSet]=convexHull;
 	 detectors.push(convexHull);
 	 }
-
 	 convexHullDetectors[pointSet]->addLineIntersection(LineSegment<D,T>(p,q),outerVar);
 	 }*/
-
+	 /*
 	void convexHullIntersectsPolygon(int pointSet, std::vector<Point<D, T>> & points, Var outerVar, bool inclusive =
 			true) {
 		//For now, polygon must be a simple, CONVEX polygon with clockwise winding
@@ -1076,7 +1072,6 @@ public:
 	 steinerTreeDetectors[pointSet]=steinerTree;
 	 detectors.push_back(steinerTree);
 	 }
-
 	 steinerTreeDetectors[pointSet]->addAreaDetectorLit(sizeLessThan,outerVar);
 	 }*/
 

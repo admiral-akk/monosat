@@ -346,8 +346,7 @@ public:
 					assert(false);
 				}
 			}
-		}
-		
+		}/*
 		for (auto & c : convex_hull_areas) {
 			if (c.pointsetID >= pointsetDim.size() || c.pointsetID < 0 || pointsetDim[c.pointsetID] < 0) {
 				parse_errorf("Bad pointsetID %d\n", c.pointsetID);
@@ -362,9 +361,9 @@ public:
 				// space_1D[c.pointsetID]->convexHullArea(c.area,c.v);
 			} else if (D == 2) {
 				space_2D->convexHullArea(c.pointsetID, c.area, c.v);
-			}/*else if(D==3){
+			}else if(D==3){
 			 space_3D[c.pointsetID]->convexHullArea(c.area,c.v);
-			 }*/else {
+			 }else {
 				assert(false);
 			}
 			
@@ -394,7 +393,7 @@ public:
 			} else {
 				assert(false);
 			}
-		}
+		}*/
 		/*	 for (auto & c: convex_hull_point_containments){
 		 if(c.pointsetID>=pointsetDim.size() || c.pointsetID<0 || pointsetDim[c.pointsetID]<0){
 		 parse_errorf("Bad pointsetID %d\n", c.pointsetID);
@@ -435,7 +434,7 @@ public:
 		 assert(false);
 		 }
 		 }*/
-
+		 /*
 		for (auto & c : convex_hull_points) {
 			if (c.pointsetID >= pointsetDim.size() || c.pointsetID < 0 || pointsetDim[c.pointsetID] < 0) {
 				parse_errorf( "Bad pointsetID %d\n", c.pointsetID);
@@ -467,10 +466,10 @@ public:
 			 space_3D[c.pointsetID]->convexHullContains(c.pointVar,c.pointOnHull);
 			 }else{
 			 assert(false);
-			 }*/
+			 }
 
-		}
-		
+		}*/
+		/*
 		for (auto & c : convex_hulls_intersect) {
 			if (c.pointsetID1 < 0 || c.pointsetID1 >= pointsetDim.size() || c.pointsetID1 < 0
 					|| pointsetDim[c.pointsetID1] < 0) {
@@ -498,7 +497,7 @@ public:
 				assert(false);
 			}
 			
-		}
+		}*/
 		
 	}
 	
