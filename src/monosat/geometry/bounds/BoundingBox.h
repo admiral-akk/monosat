@@ -22,6 +22,7 @@
 #ifndef BOUNDINGBOX_H_
 #define BOUNDINGBOX_H_
 
+#include "CSG.h"
 #include "BoundingVolume.h"
 #include "../Polygon.h"
 #include "../ConvexPolygon.h"
@@ -48,26 +49,8 @@ public:
 	ShapeType getType() {
 		return BOUNDING_BOX;
 	}
-	virtual void update()=0;
-	bool contains(const Point<D, T> & point, bool inclusive = true) {
-		
-		if (inclusive) {
-			for (int i = 0; i < D; i++) {
-				if (point[i] > max_point[i])
-					return false;
-				if (point[i] < min_point[i])
-					return false;
-			}
-		} else {
-			for (int i = 0; i < D; i++) {
-				if (point[i] >= max_point[i])
-					return false;
-				if (point[i] <= min_point[i])
-					return false;
-			}
-		}
-		return true;
-	}
+
+	/*
 	bool intersects(Shape<D, T> & s, bool inclusive = true) {
 		
 		if (s.getType() == LINE_SEGMENT) {
@@ -143,16 +126,17 @@ private:
 				return true;
 			}
 		}
-		//is this really the only test we need?
+		//is this really the only test we need? 
+		// Nope. If it were a ray, yes. But you need to show that a part lies in the box.
 		
 		return false;
 	}
 	bool intersectsConvex2d(ConvexPolygon<2, T> & polygon, bool inclusive) {
 		
 		return false;
-	}
+	}*/
 };
-
+/*
 template<unsigned int D, class T, class Bound>
 class BoundingBox: public AbstractBoundingBox<D, T> {
 	Bound & toBound;
@@ -161,41 +145,124 @@ public:
 			toBound(toBound) {
 		
 	}
-};
+};*/
 
 template<unsigned int D, class T>
-class BoundingBox<D, T, Polygon<D, T>> : public AbstractBoundingBox<D, T> {
-	Polygon<D, T> & toBound;
+class BoundingBox<D, T> : public AbstractBoundingBox<D, T> {
+private:
+	Node* node;
+
 public:
-	BoundingBox(Polygon<D, T> & toBound) :
-			toBound(toBound) {
-		
+	T getMin(int i) {
+		if (owner->conditional == Lit_Undef || sign(owner->conditional))
+			return this->min_point[i];
+		else
+			return numeric<T>::infinity();
+	}
+
+	T getMax(int i) {
+		if (owner->conditional == Lit_Undef || sign(owner->conditional))
+			return this->max_point[i];
+		else
+			return -numeric<T>::infinity();
+	}
+
+	BoundingBox(Node* owner) {
+		this.node = owner;
 	}
 	ShapeType getType() {
 		return BOUNDING_BOX;
 	}
 	
-	void update() {
-		for (int i = 0; i < D; i++) {
-			this->max_point[i] = -numeric<T>::infinity();
-			this->min_point[i] = numeric<T>::infinity();
+	// Returns true if update causes changes
+	bool update() {
+		bool changes = false;
+		NodeType type = node->type;
+		if (type != Primative) {
+			BoundingBox<D, T> A = node->left.box; 
+			BoundingBox<D, T> B = node->right.box; 
 		}
-		for (auto & p : toBound) {
+
+		T newMin, newMax;
+		switch (type) {
+			case Primative:
+				Polygon<D, T> p = node->p
+				for (auto & p : toBound) {
+					for (int i = 0; i < D; i++) {
+						if (p[i] > this->max_point[i])
+							this->max_point[i] = p[i];
+						if (p[i] < this->min_point[i])
+							this->min_point[i] = p[i];
+					}
+				}
+				break;
+			case Union:
+				for (int i = 0; i < D; i++) {
+					newMax = (A.getMax(i) > B.getMax(i)) ? A.getMax(i) : B.getMax(i);
+					newMin = (A.getMin(i) > B.getMin(i)) ? B.getMin(i) : A.getMin(i);
+					if (max_point[i] != newMax || min_point[i] != newMin)
+						changes = true;
+					max_point[i] = newMax;
+					min_point[i] = newMin;
+				}
+				break;
+			case Intersect:
+				for (int i = 0; i < D; i++) {
+					if (A.getMax(i) < A.getMin(i) || B.getMax(i) < B.getMin(i)) {
+						for (int j = 0; j < D; j++) {
+							if (max_point[i] != -numeric<T>::infinity() || min_point[i] != numeric<T>::infinity())
+								changes = true;
+							max_point[i] = -numeric<T>::infinity();
+							min_point[i] = numeric<T>::infinity();
+						}
+						break;
+					}
+
+					newMax = (A.getMax(i) < B.getMax(i)) ? A.getMax(i) : B.getMax(i);
+					newMin = (A.getMin(i) < B.getMin(i)) ? B.getMin(i) : A.getMin(i);
+					if (max_point[i] != newMax || min_point[i] != newMin)
+						changes = true;
+					max_point[i] = newMax;
+					min_point[i] = newMin;
+				}
+				break;
+			case Difference:
+				for (int i = 0; i < D; i++) {
+					newMax = A.getMax();
+					newMin = A.getMin();
+
+					if (max_point[i] != newMax || min_point[i] != newMin) 
+						changes = true;
+					max_point[i] = newMax;
+					min_point[i] = newMin;
+				}
+				break;
+			default:
+				break;
+		}
+		return changes;
+	}
+	bool contains(const Point<D, T> & point, bool inclusive = true) {
+		if (!owner->active)
+			return false;
+		if (inclusive) {
 			for (int i = 0; i < D; i++) {
-				if (p[i] > this->max_point[i])
-					this->max_point[i] = p[i];
-				if (p[i] < this->min_point[i])
-					this->min_point[i] = p[i];
+				if (point[i] > max_point[i])
+					return false;
+				if (point[i] < min_point[i])
+					return false;
+			}
+		} else {
+			for (int i = 0; i < D; i++) {
+				if (point[i] >= max_point[i])
+					return false;
+				if (point[i] <= min_point[i])
+					return false;
 			}
 		}
-		//need to pre-allocate these to make checks using expensive arbitrary precision arithemetic cheap.
-		this->top_left_point[0] = this->min_point[0];
-		this->top_left_point[1] = this->max_point[1];
-		
-		this->bottom_right_point[0] = this->max_point[0];
-		this->bottom_right_point[1] = this->min_point[1];
+		return true;
 	}
-	
+	/*
 	bool dbg_uptodate() {
 #ifndef NDEBUG
 		//std::vector<Point<D,T>>& vertices  = toBound.getVertices();
@@ -218,7 +285,7 @@ public:
 		assert(this->min_point == dbg_min);
 #endif
 		return true;
-	}
+	}*/
 };
 
 #endif /* BOUNDINGBOX_H_ */

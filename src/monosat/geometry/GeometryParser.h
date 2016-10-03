@@ -259,12 +259,7 @@ public:
 			return false;
 		} else if (match(in, "convex_hull_area_gt")) {
 			readConvexHullArea(in, S);
-		}/*else if (match(in,"convex_hull_containment")){
-		 readConvexHullPointContained(in,S);
-		 }else if (match(in,"convex_hull_intersects_line")){
-		 readConvexHullIntersectsLine(in,S);
-		 }*/
-		else if (match(in, "convex_hull_collides_polygon")) {
+		} else if (match(in, "convex_hull_collides_polygon")) {
 			readConvexHullIntersectsPolygon(in, S, true);
 		} else if (match(in, "convex_hull_intersects_polygon")) {
 			readConvexHullIntersectsPolygon(in, S, false);

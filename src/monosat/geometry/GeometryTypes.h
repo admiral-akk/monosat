@@ -43,6 +43,25 @@ using namespace Monosat;
  template <> constexpr double epsilon<double> = 0.000001;
  */
 template<typename T> struct epsilon;
+ 
+enum nodeType { Union, Intersection, Difference, Primative };
+
+ 	struct Node 
+ 	{
+
+ 	public:
+		// Determines the primative or operation.
+ 		nodeType type;
+ 		// Undef if no conditional applies
+ 		Lit conditional;
+		// If it's a leaf, p will point to the primative.
+ 		Polygon<D, T>* p;
+ 		Node* left;
+ 		Node* right;
+ 		Node* parent;
+ 		BoundingBox<D,T> box;
+
+ 	};
 
 template<> struct epsilon<float> {
 private:

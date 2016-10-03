@@ -37,7 +37,10 @@ public:
 		return detectorID;
 	}
 	
+	// Returns true if there's NO conflict
+	// Returns false (and builds a conflict clause) otherwise.
 	virtual bool propagate(vec<Lit> & conflict)=0;
+
 	virtual void buildReason(Lit p, vec<Lit> & reason, CRef marker)=0;
 	virtual bool checkSatisfied() {
 		return true;
@@ -58,6 +61,8 @@ public:
 	virtual void preprocess() {
 		
 	}
+
+	// Suggests an assignment to the solver
 	virtual Lit decide() {
 		return lit_Undef;
 	}
