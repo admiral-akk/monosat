@@ -31,7 +31,7 @@ public:
 	}
 	virtual ~BoundingVolume() {
 	}
-	virtual void update()=0;
+	virtual bool update()=0;
 	virtual bool contains(const Point<D, T> & point, bool inclusive = true)=0;
 	virtual bool intersects(Shape<D, T> & s, bool inclusive = true)=0;
 };

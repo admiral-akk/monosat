@@ -428,9 +428,9 @@ public:
 			assigns[e.var] = l_Undef;
 			if (!(e.isPoint)) {
 				if (e.assign) 
-					under_set.updateBoolean(point_num, false)
+					under_set.updateBoolean(~mkLit(e.var));
 				else 
-					over_set.updateBoolean(point_num, true)
+					over_set.updateBoolean(mkLit(e.var));
 			}
 		}
 		
@@ -507,9 +507,9 @@ public:
 			//don't do anything
 		} else {
 			if (sign(l)) {
-				under_set.updateBoolean(var(l),true);
+				under_set.updateBoolean(l);
 			} else {
-				over_set.updateBoolean(var(l),false);
+				over_set.updateBoolean(l);
 			}
 			//this is a graph property detector var
 			//if (!sign(l) && vars[var(l)].occursPositive != occurs)

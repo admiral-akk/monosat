@@ -39,13 +39,14 @@ public:
 	ShapeType getType() {
 		return BOUNDING_SPHERE;
 	}
-	virtual void update()=0;
+	virtual bool update()=0;
 	bool contains(const Point<D, T> & point, bool inclusive = true) {
 		if (inclusive) {
 			return point.distance_underapprox(circleCenter) <= circleRadius;
 		} else {
 			return point.distance_underapprox(circleCenter) < circleRadius;
 		}
+		return false;
 	}
 	bool intersects(Shape<D, T> & s, bool inclusive = true) {
 		assert(false); //not yet implemented

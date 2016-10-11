@@ -125,9 +125,8 @@ private:
 	// Clause Learning
 	//
 
-	// Returns true if could learn clause over CSG sub-tree, false if impossible
-	// If it returns false, conflict will remain unchanged! 
-	bool learnClause(Node* root, bool containsValue, vec<Lit> & conflict, std::map<Node*,bool>& cache) {
+	// Returns learned clause in conflict
+	void learnClause(Node* root, bool containsValue, vec<Lit> & conflict, std::map<Node*,bool>& cache) {
 		if (containsValue) {
 
 			// We need a clause that will stop the root from containing the point
@@ -135,7 +134,7 @@ private:
 			if (cache[root] && root->conditional != lit_Undef && sign(root->conditional)) {
 				// Simplest clause is to shut this node off.
 				conflict.push(~root->conditional);
-				return true;
+				return;
 			}
 
 			switch (root->type) {
@@ -157,24 +156,24 @@ private:
 					}
 					delete temp_A;
 					delete temp_B;
-					return true;
+					return;
 
 				case Intersection:
 					// If either child doesn't contain the point, neither will this node
 					learnClause(root->left,containsValue,conflict))
 					learnClause(root->right,containsValue,conflict)
-					return true;
+					return;
 
 				case Difference:
 
 					// If either the left doesn't contain it, or the right does, then this node won't contain it
 					learnClause(root->left,containsValue,conflict))
 					learnClause(root->right,!containsValue,conflict)
-					return true;
+					return;
 
 				case Primative:
 					// At this point, the primative cannot contain the point, so there's nothing we can return to learn.
-					return true;
+					return;
 				default:
 			}
 		} else {
@@ -184,7 +183,7 @@ private:
 			if (cache[root] && root->conditional != lit_Undef && !sign(root->conditional)) {
 				// Simplest clause is to turn this node on.
 				conflict.push(root->conditional);
-				return true;
+				return;
 			}
 
 			switch (root->type) {
@@ -193,7 +192,7 @@ private:
 					// If either child contains the point, then so will this node
 					learnClause(root->left,containsValue,conflict))
 					learnClause(root->right,containsValue,conflict)
-					return true;
+					return;
 
 				case Intersection:
 					// Take the shorter of the two clauses the children produce
@@ -212,7 +211,7 @@ private:
 					}
 					delete temp_A;
 					delete temp_B;
-					return true;
+					return;
 
 				case Difference:
 					// Take the shorter of the two clauses the children produce
@@ -231,11 +230,11 @@ private:
 					}
 					delete temp_A;
 					delete temp_B;
-					return true;
+					return;
 					
 				case Primative:
 					// At this point, the primative cannot contain the point, so there's nothing we can return to learn.
-					return true;
+					return;
 				default:
 			}
 		}

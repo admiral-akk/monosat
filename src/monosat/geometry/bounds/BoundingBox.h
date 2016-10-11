@@ -22,10 +22,10 @@
 #ifndef BOUNDINGBOX_H_
 #define BOUNDINGBOX_H_
 
-#include "CSG.h"
 #include "BoundingVolume.h"
 #include "../Polygon.h"
 #include "../ConvexPolygon.h"
+#include "../CSGTypes.h"
 #include <vector>
 
 //axis-aligned bounding box
@@ -146,30 +146,40 @@ public:
 		
 	}
 };*/
+template<unsigned int D, class T>
+class Node;
 
 template<unsigned int D, class T>
-class BoundingBox<D, T> : public AbstractBoundingBox<D, T> {
-private:
-	Node* node;
+class BoundingBox {
+
+	private:
+	Node<D,T>* node;
+	Point<D, T> max_point;
+	Point<D, T> min_point;
 
 public:
 	T getMin(int i) {
-		if (owner->conditional == Lit_Undef || sign(owner->conditional))
+		if (node->conditional == lit_Undef || sign(node->conditional))
 			return this->min_point[i];
 		else
 			return numeric<T>::infinity();
 	}
 
 	T getMax(int i) {
-		if (owner->conditional == Lit_Undef || sign(owner->conditional))
+		if (node->conditional == lit_Undef || sign(node->conditional))
 			return this->max_point[i];
 		else
 			return -numeric<T>::infinity();
 	}
 
-	BoundingBox(Node* owner) {
-		this.node = owner;
+	BoundingBox() {
+		this->node = NULL;
 	}
+
+	BoundingBox(Node<D,T>* owner) {
+		this->node = owner;
+	}
+
 	ShapeType getType() {
 		return BOUNDING_BOX;
 	}
@@ -177,17 +187,18 @@ public:
 	// Returns true if update causes changes
 	bool update() {
 		bool changes = false;
-		NodeType type = node->type;
+		nodeType type = node->type;
+		BoundingBox<D, T> A, B;
 		if (type != Primative) {
-			BoundingBox<D, T> A = node->left.box; 
-			BoundingBox<D, T> B = node->right.box; 
+			A = node->left->box; 
+			B = node->right->box; 
 		}
 
 		T newMin, newMax;
 		switch (type) {
-			case Primative:
-				Polygon<D, T> p = node->p
-				for (auto & p : toBound) {
+			case Primative: {
+				Polygon<D, T>* poly = node->p;
+				for (auto & p : *poly) {
 					for (int i = 0; i < D; i++) {
 						if (p[i] > this->max_point[i])
 							this->max_point[i] = p[i];
@@ -196,45 +207,46 @@ public:
 					}
 				}
 				break;
+			}
 			case Union:
 				for (int i = 0; i < D; i++) {
 					newMax = (A.getMax(i) > B.getMax(i)) ? A.getMax(i) : B.getMax(i);
 					newMin = (A.getMin(i) > B.getMin(i)) ? B.getMin(i) : A.getMin(i);
-					if (max_point[i] != newMax || min_point[i] != newMin)
+					if (this->max_point[i] != newMax || this->min_point[i] != newMin)
 						changes = true;
-					max_point[i] = newMax;
-					min_point[i] = newMin;
+					this->max_point[i] = newMax;
+					this->min_point[i] = newMin;
 				}
 				break;
-			case Intersect:
+			case Intersection:
 				for (int i = 0; i < D; i++) {
 					if (A.getMax(i) < A.getMin(i) || B.getMax(i) < B.getMin(i)) {
 						for (int j = 0; j < D; j++) {
-							if (max_point[i] != -numeric<T>::infinity() || min_point[i] != numeric<T>::infinity())
+							if (this->max_point[i] != -numeric<T>::infinity() || this->min_point[i] != numeric<T>::infinity())
 								changes = true;
-							max_point[i] = -numeric<T>::infinity();
-							min_point[i] = numeric<T>::infinity();
+							this->max_point[i] = -numeric<T>::infinity();
+							this->min_point[i] = numeric<T>::infinity();
 						}
 						break;
 					}
 
 					newMax = (A.getMax(i) < B.getMax(i)) ? A.getMax(i) : B.getMax(i);
 					newMin = (A.getMin(i) < B.getMin(i)) ? B.getMin(i) : A.getMin(i);
-					if (max_point[i] != newMax || min_point[i] != newMin)
+					if (this->max_point[i] != newMax || this->min_point[i] != newMin)
 						changes = true;
-					max_point[i] = newMax;
-					min_point[i] = newMin;
+					this->max_point[i] = newMax;
+					this->min_point[i] = newMin;
 				}
 				break;
 			case Difference:
 				for (int i = 0; i < D; i++) {
-					newMax = A.getMax();
-					newMin = A.getMin();
+					newMax = A.getMax(i);
+					newMin = A.getMin(i);
 
-					if (max_point[i] != newMax || min_point[i] != newMin) 
+					if (this->max_point[i] != newMax || this->min_point[i] != newMin) 
 						changes = true;
-					max_point[i] = newMax;
-					min_point[i] = newMin;
+					this->max_point[i] = newMax;
+					this->min_point[i] = newMin;
 				}
 				break;
 			default:
@@ -243,20 +255,20 @@ public:
 		return changes;
 	}
 	bool contains(const Point<D, T> & point, bool inclusive = true) {
-		if (!owner->active)
+		if (node->conditional == lit_Undef)
 			return false;
 		if (inclusive) {
 			for (int i = 0; i < D; i++) {
-				if (point[i] > max_point[i])
+				if (point[i] > this->max_point[i])
 					return false;
-				if (point[i] < min_point[i])
+				if (point[i] < this->min_point[i])
 					return false;
 			}
 		} else {
 			for (int i = 0; i < D; i++) {
-				if (point[i] >= max_point[i])
+				if (point[i] >= this->max_point[i])
 					return false;
-				if (point[i] <= min_point[i])
+				if (point[i] <= this->min_point[i])
 					return false;
 			}
 		}
