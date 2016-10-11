@@ -3,9 +3,7 @@
 #define CSG_H_
 #include <vector>
 #include <map>
-#include "GeometryTypes.h"
-#include "bounds/BoundingBox.h"
-#include "Polygon.h"
+#include "CSGTypes.h"
 #include <stdio.h>
 #include <limits.h>
 
@@ -15,10 +13,11 @@
 
  template<unsigned int D, class T = double> class CSG {
 
+
  private:
 
  	// Map from boolean name to node.
- 	std::map<Var, Node*> boolToNode;
+ 	std::map<Var, Node<D,T>*> boolToNode;
 
 	//
 	// Bounding Box
@@ -28,7 +27,7 @@
 	// Initialization
 	//
 
- 	void initializeBoundingBox(Node* root) {
+ 	void initializeBoundingBox(Node<D,T>* root) {
  		if (root->type != Primative) {
  			initializeBoundingBox(root->left);
  			initializeBoundingBox(root->right);
@@ -40,7 +39,7 @@
 	// Updates
 	//
 
- 	void updateParentBoundingBox(Node* node) {
+ 	void updateParentBoundingBox(Node<D,T>* node) {
  		if (!node)
  			return;
  		if (!node->box.update()) 
@@ -55,8 +54,8 @@
  	// 
 
  	void updateBoolean(Lit value) {
- 		boolSwitchMap[var(value)]->conditional = value;
- 		updateParentBoundingBox(boolSwitchMap[var(value)]);
+ 		boolToNode[var(value)]->conditional = value;
+ 		updateParentBoundingBox(boolToNode[var(value)]);
  	}
 };
-#endif CSG_H_
+#endif /* CSG_H_ */
