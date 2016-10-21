@@ -333,7 +333,7 @@ public:
 					 space_1D[i]->newPoint(pnt,p.var);*/
 				} else if (D == 2) {
 					Point<2, T> pnt(p.position);
-					space_2D->newPoint(i, pnt, p.var);
+					//space_2D->newPoint(i, pnt, p.var);
 				}/*else if(D==3){
 				 Point<3,double> pnt(p.position);
 				 space_3D[i]->newPoint(pnt,p.var);
