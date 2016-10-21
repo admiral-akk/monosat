@@ -45,7 +45,7 @@ public:
 	long stats_updates = 0;
 	MonotoneConvexHull(PointSet<D, T> & p) :
 			pointSet(p) {
-		hull.setBoundingVolume(new BoundingBox<D, T, Polygon<D, T>>(hull));
+		hull.setBoundingVolume(new BoundingBox<D, T>(hull));
 	}
 	
 	void update() {

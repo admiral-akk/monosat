@@ -34,59 +34,59 @@
 #include <cstdio>
 #endif
 
-using namespace Monosat;
+ using namespace Monosat;
 
 template<unsigned int D, class T = double>
-class GeometryTheorySolver: public Theory {
-	
-public:
-	
-	double rnd_seed;
+ class GeometryTheorySolver: public Theory {
 
-	int local_q=0;
-private:
-	Solver * S;
-public:
-	int id;
+ public:
 
-	vec<lbool> assigns;
+ 	double rnd_seed;
 
-	CSG<D, T> under_csg;
-	CSG<D, T> over_csg;
-	struct Assignment {
-		bool isPoint :1;
-		bool assign :1;
-		int pointID;
-		Var var;
-		Assignment(bool isPoint, bool _assign, int pointID, Var v) :
-				isPoint(isPoint), assign(_assign), pointID(pointID), var(v) {
-			
-		}
-		Assignment() :
-				isPoint(false), assign(false), pointID(0), var(var_Undef) {
-			
-		}
-	};
-	vec<Assignment> trail;
-	vec<int> trail_lim;
+ 	int local_q=0;
+ private:
+ 	Solver * S;
+ public:
+ 	int id;
 
-	std::vector<GeometryDetector*> detectors;
-	
-	vec<int> marker_map;
+ 	vec<lbool> assigns;
+
+ 	CSG<D, T> under_csg;
+ 	CSG<D, T> over_csg;
+ 	struct Assignment {
+ 		bool isPoint :1;
+ 		bool assign :1;
+ 		int pointID;
+ 		Var var;
+ 		Assignment(bool isPoint, bool _assign, int pointID, Var v) :
+ 		isPoint(isPoint), assign(_assign), pointID(pointID), var(v) {
+
+ 		}
+ 		Assignment() :
+ 		isPoint(false), assign(false), pointID(0), var(var_Undef) {
+
+ 		}
+ 	};
+ 	vec<Assignment> trail;
+ 	vec<int> trail_lim;
+
+ 	std::vector<GeometryDetector*> detectors;
+
+ 	vec<int> marker_map;
 
 	//bool anyRequiresPropagation=true;
-	vec<bool> requiresPropagation;
-	vec<int> toPropagate;
+ 	vec<bool> requiresPropagation;
+ 	vec<int> toPropagate;
 
-	vec<char> seen;
-	vec<int> to_visit;
-	vec<Lit> tmp_clause;
+ 	vec<char> seen;
+ 	vec<int> to_visit;
+ 	vec<Lit> tmp_clause;
 
 	//Data about local theory variables, and how they connect to the sat solver's variables
-	struct VarData {
-		int isPoint :1;
-		int occursPositive :1;
-		int occursNegative :1;
+ 	struct VarData {
+ 		int isPoint :1;
+ 		int occursPositive :1;
+ 		int occursNegative :1;
 		int detector_point :29; //the detector this variable belongs to, or its point number, if it is an point variable
 		Var solverVar;
 	};
@@ -126,7 +126,7 @@ public:
 	vec<Lit> reach_cut;
 
 	GeometryTheorySolver(Solver * S_, int _id = -1) :
-			S(S_), id(_id) {
+	S(S_), id(_id) {
 		
 
 		rnd_seed = opt_random_seed;
@@ -156,115 +156,108 @@ public:
 		 printf("Min-cut Time: %f (%d calls, %f average, #Cuts: %d, AvgLength %f, total: %d)\n", mctime, stats_mc_calls,(mctime/(stats_mc_calls ? stats_mc_calls:1)),  num_learnt_cuts, (learnt_cut_clause_length /  ((float) num_learnt_cuts+1)),learnt_cut_clause_length);
 		 */
 
-		printf("Propagations: %ld (%f s, avg: %f s, %ld skipped)\n", stats_propagations, propagationtime,
-				(propagationtime) / ((double) stats_propagations + 1), stats_propagations_skipped);
-		printf("Decisions: %ld (%f s, avg: %f s)\n", stats_decisions, stats_decision_time,
-				(stats_decision_time) / ((double) stats_decisions + 1));
-		printf("Conflicts: %ld\n", stats_num_conflicts);
-		printf("Reasons: %ld (%f s, avg: %f s)\n", stats_num_reasons, stats_reason_time,
-				(stats_reason_time) / ((double) stats_num_reasons + 1));
-		fflush(stdout);
-	}
-	inline int getTheoryIndex() {
-		return theory_index;
-	}
-	inline void setTheoryIndex(int id) {
-		theory_index = id;
-	}
-	inline int getGraphID() {
-		return id;
-	}
-	inline bool isPointVar(Var v) {
-		assert(v < vars.size());
-		return vars[v].isPoint;
-	}
-	inline int getPointID(Var v) {
-		assert(isPointVar(v));
-		return vars[v].detector_point;
-	}
-	
-	inline int getPointsetIndex(int pointID) {
-		return points[pointID].pointset_index;
-	}
-	
-	inline int getPointset(int pointID) {
-		return points[pointID].pointset;
-	}
-	
-	inline int getDetector(Var v) {
-		assert(!isPointVar(v));
-		return vars[v].detector_point;
-	}
-	
-	void makeEqual(Lit l1, Lit l2) {
-		Lit o1 = toSolver(l1);
-		Lit o2 = toSolver(l2);
-		S->addClause(~o1, o2);
-		S->addClause(o1, ~o2);
-	}
-	//Both l1 and l2 are SOLVER vars, not theory vars!
-	void makeEqualInSolver(Lit l1, Lit l2) {
-		S->addClause(~l1, l2);
-		S->addClause(l1, ~l2);
-	}
-	void makeTrueInSolver(Lit l1) {
-		S->addClause(l1);
-	}
-	void addClause(Lit l1) {
-		Lit o1 = toSolver(l1);
-		S->addClause(o1);
-	}
-	void addClause(Lit l1, Lit l2) {
-		Lit o1 = toSolver(l1);
-		Lit o2 = toSolver(l2);
-		S->addClause(o1, o2);
-	}
-	void addClause(Lit l1, Lit l2, Lit l3) {
-		Lit o1 = toSolver(l1);
-		Lit o2 = toSolver(l2);
-		Lit o3 = toSolver(l3);
-		S->addClause(o1, o2, o3);
-	}
-	void addClause(vec<Lit> & c) {
-		tmp_clause.clear();
-		c.copyTo(tmp_clause);
-		toSolver(tmp_clause);
-		S->addClause(tmp_clause);
-	}
-	void addClauseSafely(vec<Lit> & c) {
-		tmp_clause.clear();
-		c.copyTo(tmp_clause);
-		toSolver(tmp_clause);
-		
-		S->addClauseSafely(tmp_clause);
-	}
-	
-	Var newVar(int forDetector = -1, bool connectToTheory = false) {
-		Var s = S->newVar();
-		
-		return newVar(s, forDetector, false, connectToTheory);
-	}
-	Var newVar(Var solverVar, int detector, bool isPoint = false, bool connectToTheory = true) {
-		while (S->nVars() <= solverVar)
-			S->newVar();
-		Var v = vars.size();
-		vars.push_back(VarData());
-		vars[v].isPoint = isPoint;
-		vars[v].detector_point = detector;
-		vars[v].solverVar = solverVar;
-		assigns.push(l_Undef);
-		if (connectToTheory) {
-			S->setTheoryVar(solverVar, getTheoryIndex(), v);
-			assert(toSolver(v) == solverVar);
+		 printf("Propagations: %ld (%f s, avg: %f s, %ld skipped)\n", stats_propagations, propagationtime,
+		 	(propagationtime) / ((double) stats_propagations + 1), stats_propagations_skipped);
+		 printf("Decisions: %ld (%f s, avg: %f s)\n", stats_decisions, stats_decision_time,
+		 	(stats_decision_time) / ((double) stats_decisions + 1));
+		 printf("Conflicts: %ld\n", stats_num_conflicts);
+		 printf("Reasons: %ld (%f s, avg: %f s)\n", stats_num_reasons, stats_reason_time,
+		 	(stats_reason_time) / ((double) stats_num_reasons + 1));
+		 fflush(stdout);
 		}
-		if (!isPoint && detector >= 0)
-			detectors[detector]->addVar(v);
-		return v;
-	}
-	inline int level(Var v) {
-		return S->level(toSolver(v));
-	}
-	inline int decisionLevel() {
+		inline int getTheoryIndex() {
+			return theory_index;
+		}
+		inline void setTheoryIndex(int id) {
+			theory_index = id;
+		}
+		inline int getGraphID() {
+			return id;
+		}
+		inline bool isPointVar(Var v) {
+			assert(v < vars.size());
+			return vars[v].isPoint;
+		}
+		inline int getPointID(Var v) {
+			assert(isPointVar(v));
+			return vars[v].detector_point;
+		}
+
+
+		inline int getDetector(Var v) {
+			assert(!isPointVar(v));
+			return vars[v].detector_point;
+		}
+
+		void makeEqual(Lit l1, Lit l2) {
+			Lit o1 = toSolver(l1);
+			Lit o2 = toSolver(l2);
+			S->addClause(~o1, o2);
+			S->addClause(o1, ~o2);
+		}
+	//Both l1 and l2 are SOLVER vars, not theory vars!
+		void makeEqualInSolver(Lit l1, Lit l2) {
+			S->addClause(~l1, l2);
+			S->addClause(l1, ~l2);
+		}
+		void makeTrueInSolver(Lit l1) {
+			S->addClause(l1);
+		}
+		void addClause(Lit l1) {
+			Lit o1 = toSolver(l1);
+			S->addClause(o1);
+		}
+		void addClause(Lit l1, Lit l2) {
+			Lit o1 = toSolver(l1);
+			Lit o2 = toSolver(l2);
+			S->addClause(o1, o2);
+		}
+		void addClause(Lit l1, Lit l2, Lit l3) {
+			Lit o1 = toSolver(l1);
+			Lit o2 = toSolver(l2);
+			Lit o3 = toSolver(l3);
+			S->addClause(o1, o2, o3);
+		}
+		void addClause(vec<Lit> & c) {
+			tmp_clause.clear();
+			c.copyTo(tmp_clause);
+			toSolver(tmp_clause);
+			S->addClause(tmp_clause);
+		}
+		void addClauseSafely(vec<Lit> & c) {
+			tmp_clause.clear();
+			c.copyTo(tmp_clause);
+			toSolver(tmp_clause);
+
+			S->addClauseSafely(tmp_clause);
+		}
+
+		Var newVar(int forDetector = -1, bool connectToTheory = false) {
+			Var s = S->newVar();
+
+			return newVar(s, forDetector, false, connectToTheory);
+		}
+		Var newVar(Var solverVar, int detector, bool isPoint = false, bool connectToTheory = true) {
+			while (S->nVars() <= solverVar)
+				S->newVar();
+			Var v = vars.size();
+			vars.push_back(VarData());
+			vars[v].isPoint = isPoint;
+			vars[v].detector_point = detector;
+			vars[v].solverVar = solverVar;
+			assigns.push(l_Undef);
+			if (connectToTheory) {
+				S->setTheoryVar(solverVar, getTheoryIndex(), v);
+				assert(toSolver(v) == solverVar);
+			}
+			if (!isPoint && detector >= 0)
+				detectors[detector]->addVar(v);
+			return v;
+		}
+		inline int level(Var v) {
+			return S->level(toSolver(v));
+		}
+		inline int decisionLevel() {
 		return trail_lim.size(); //S->decisionLevel();
 	}
 	inline int nVars() const {
@@ -389,12 +382,10 @@ public:
 				if (e.isPoint) {
 					assert(dbg_value(e.var)==value(e.var));
 					int point_num = getPointID(e.var); //e.var-min_point_var;
-					int pointSet = points[point_num].pointset;
-					int pointsetIndex = getPointsetIndex(point_num);
 					if (e.assign) {
-						under_csg.updateBoolean(assigns[e.var]);
+						//under_csg.updateBoolean(assigns[e.var]);
 					} else {
-						over_csg.updateBoolean(assigns[e.var]);	
+						//over_csg.updateBoolean(assigns[e.var]);	
 						//assert(over.hasPoint(e.pointID));
 					}
 				} else {
@@ -450,14 +441,13 @@ public:
 			}
 			if (e.isPoint) {
 				int point_num = getPointID(e.var); //e.var-min_point_var;
-				int pointSet = points[point_num].pointset;
-				int pointsetIndex = getPointsetIndex(point_num);
 				assert(assigns[e.var]!=l_Undef);
 				assigns[e.var] = l_Undef;
 				if (e.assign) {
-					under_csg.updateBoolean(~mklit(e.var));
+				//	under_csg.updateBoolean(~mklit(e.var));
 				} else {
-					over_csg.updateBoolean(mklit(e.var));				}
+				//	over_csg.updateBoolean(mklit(e.var));	
+				}
 			} else {
 
 				assigns[e.var] = l_Undef;
@@ -513,7 +503,7 @@ public:
 		return true;
 		for(int i = 0;i<points.size();i++) {
 			if(points[i].var<0)
-			continue;
+				continue;
 			PointData e = points[i];
 			lbool val = value(e.var);
 			int pointSet = e.pointset;
@@ -542,40 +532,40 @@ public:
 	 return point_num;
 	 }*/
 
-	void preprocess() {
-		for (int i = 0; i < detectors.size(); i++) {
-			detectors[i]->preprocess();
-		}
-	}
-	void setLiteralOccurs(Lit l, bool occurs) {
-		if (isPointVar(var(l))) {
+	 void preprocess() {
+	 	for (int i = 0; i < detectors.size(); i++) {
+	 		detectors[i]->preprocess();
+	 	}
+	 }
+	 void setLiteralOccurs(Lit l, bool occurs) {
+	 	if (isPointVar(var(l))) {
 			//don't do anything
-		} else {
+	 	} else {
 			//this is a graph property detector var
-			if (!sign(l) && vars[var(l)].occursPositive != occurs)
-				detectors[getDetector(var(l))]->setOccurs(l, occurs);
-			else if (sign(l) && vars[var(l)].occursNegative != occurs)
-				detectors[getDetector(var(l))]->setOccurs(l, occurs);
-		}
-		
-	}
-	void printSolution() {
-		for (GeometryDetector* d : detectors) {
-			d->printSolution();
-		}
-	}
-	void enqueueTheory(Lit l) {
-		Var v = var(l);
-		assert(S->value(toSolver(l))==l_True);
-		int lev = level(v);
-		
-		assert(decisionLevel() <= lev);
-		
-		while (lev > trail_lim.size()) {
-			newDecisionLevel();
-		}
-		
-		if (assigns[var(l)] != l_Undef) {
+	 		if (!sign(l) && vars[var(l)].occursPositive != occurs)
+	 			detectors[getDetector(var(l))]->setOccurs(l, occurs);
+	 		else if (sign(l) && vars[var(l)].occursNegative != occurs)
+	 			detectors[getDetector(var(l))]->setOccurs(l, occurs);
+	 	}
+
+	 }
+	 void printSolution() {
+	 	for (GeometryDetector* d : detectors) {
+	 		d->printSolution();
+	 	}
+	 }
+	 void enqueueTheory(Lit l) {
+	 	Var v = var(l);
+	 	assert(S->value(toSolver(l))==l_True);
+	 	int lev = level(v);
+
+	 	assert(decisionLevel() <= lev);
+
+	 	while (lev > trail_lim.size()) {
+	 		newDecisionLevel();
+	 	}
+
+	 	if (assigns[var(l)] != l_Undef) {
 			return;			//this is already enqueued.
 		}
 		assert(assigns[var(l)]==l_Undef);
@@ -604,23 +594,15 @@ public:
 		 */
 
 		//if(v>= min_point_var && v<min_point_var+points.size())
-		if (isPointVar(var(l))) {
-			
+		 if (isPointVar(var(l))) {
+
 			//this is an point assignment
 			int pointID = getPointID(var(l)); //v-min_point_var;
 			assert(points[pointID].var == var(l));
 			
-			int pointsetIndex = getPointsetIndex(pointID);
-			int pointsetID = getPointset(pointID);
 			trail.push(Assignment(true, !sign(l), pointID, var(l)));
 			
-			if (!requiresPropagation[pointsetID]) {
-				toPropagate.push(pointsetID);
-				//anyRequiresPropagation=true;
-				requiresPropagation[pointsetID] = true;
-			}
 			Assignment e = trail.last();
-			int pointSet = points[pointID].pointset;
 			if (!sign(l)) {
 				under_csg.updateBoolean(~l);
 			} else {
@@ -655,58 +637,48 @@ public:
 		 }
 		 }
 		 }*/
-		stats_propagations++;
-		dbg_sync();
-		if (!toPropagate.size()) {
-			stats_propagations_skipped++;
-			assert(dbg_graphsUpToDate());
-			return true;
-		}
-		
-		bool any_change = false;
-		double startproptime = rtime(1);
-		static vec<int> detectors_to_check;
-		
-		conflict.clear();
-		
-		dbg_sync();
-		assert(dbg_graphsUpToDate());
-		
-		while (toPropagate.size()) {
-			int pointset = toPropagate.last();
-			
-			for (GeometryDetector * d : pointsetDetectors[pointset]) {
-				assert(conflict.size() == 0);
-				bool r = d->propagate(conflict);
-				if (!r) {
-					stats_num_conflicts++;
-					toSolver(conflict);
-					propagationtime += rtime(1) - startproptime;
-					return false;
-				}
-			}
-			toPropagate.pop();
-			requiresPropagation[pointset] = false;
-		}
-		
-		if (collisionDetector) {
-			bool r = collisionDetector->propagate(conflict);
-			if (!r) {
-				stats_num_conflicts++;
-				toSolver(conflict);
-				propagationtime += rtime(1) - startproptime;
-				return false;
-			}
-		}
-		
+		 stats_propagations++;
+		 dbg_sync();
+		 if (!toPropagate.size()) {
+		 	stats_propagations_skipped++;
+		 	assert(dbg_graphsUpToDate());
+		 	return true;
+		 }
+
+		 bool any_change = false;
+		 double startproptime = rtime(1);
+		 static vec<int> detectors_to_check;
+
+		 conflict.clear();
+
+		 dbg_sync();
+		 assert(dbg_graphsUpToDate());
+
+		 while (toPropagate.size()) {
+		 	int pointset = toPropagate.last();
+
+		 	for (GeometryDetector * d : detectors) {
+		 		assert(conflict.size() == 0);
+		 		bool r = d->propagate(conflict);
+		 		if (!r) {
+		 			stats_num_conflicts++;
+		 			toSolver(conflict);
+		 			propagationtime += rtime(1) - startproptime;
+		 			return false;
+		 		}
+		 	}
+		 	toPropagate.pop();
+		 	requiresPropagation[pointset] = false;
+		 }
+
 #ifndef NDEBUG
 		/*for(int i = 0;i<detectors.size();i++){
 		 assert(detectors[i]->checkSatisfied());
 		 }*/
 #endif
-		dbg_full_sync();
-		
-		detectors_to_check.clear();
+		 dbg_full_sync();
+
+		 detectors_to_check.clear();
 		/*	if(	itp>=955879){
 		 int a =1;
 		 cout<<"pause after\n";
@@ -730,56 +702,55 @@ public:
 		 }
 		 }*/
 
-		double elapsed = rtime(1) - startproptime;
-		propagationtime += elapsed;
-		dbg_sync();
-		
-		return true;
-	}
-	;
+		 double elapsed = rtime(1) - startproptime;
+		 propagationtime += elapsed;
+		 dbg_sync();
 
-	bool solveTheory(vec<Lit> & conflict) {
-		
-		//Just to be on the safe side, force all detectors to propagate... this shouldn't really be required.
-		
-		bool ret = propagateTheory(conflict);
-		//Under normal conditions, this should _always_ hold (as propagateTheory should have been called and checked by the parent solver before getting to this point).
-		assert(ret);
-		return ret;
-	}
-	;
-
-	void drawFull() {
-		
-	}
-	
-	bool check_solved() {
-		dbg_full_sync();
-		for (int i = 0; i < vars.size(); i++) {
-			if (value(i) != dbg_value(i)) {
-				cout << "Error! Theory unsolved or out of sync: theory var " << i;
-				
-				if (isPointVar(i)) {
-					cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
-				} else {
-					cout << " for detector " << getDetector(i);
-				}
-				cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
-				cout << "!\n";
-				return false;
-			}
+		 return true;
 		}
-		for (int i = 0; i < points.size(); i++) {
-			if (points[i].var < 0)
-				continue;
-			PointData & e = points[i];
-			lbool val = value(e.var);
-			if (val == l_Undef) {
-				cout << "Error! Theory unsolved!\n";
-				return false;
+		;
+
+		bool solveTheory(vec<Lit> & conflict) {
+
+		//Just to be on the safe side, force all detectors to propagate... this shouldn't really be required.
+
+			bool ret = propagateTheory(conflict);
+		//Under normal conditions, this should _always_ hold (as propagateTheory should have been called and checked by the parent solver before getting to this point).
+			assert(ret);
+			return ret;
+		}
+		;
+
+		void drawFull() {
+
+		}
+
+		bool check_solved() {
+			dbg_full_sync();
+			for (int i = 0; i < vars.size(); i++) {
+				if (value(i) != dbg_value(i)) {
+					cout << "Error! Theory unsolved or out of sync: theory var " << i;
+
+					if (isPointVar(i)) {
+						cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
+					} else {
+						cout << " for detector " << getDetector(i);
+					}
+					cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
+					cout << "!\n";
+					return false;
+				}
 			}
-			int pointset = e.pointset;
-			if (val == l_True) {
+			for (int i = 0; i < points.size(); i++) {
+				if (points[i].var < 0)
+					continue;
+				PointData & e = points[i];
+				lbool val = value(e.var);
+				if (val == l_Undef) {
+					cout << "Error! Theory unsolved!\n";
+					return false;
+				}
+				if (val == l_True) {
 				/*	if(!g.haspoint(e.from,e.to)){
 				 return false;
 				 }
@@ -794,7 +765,7 @@ public:
 				//	cout << "Error! Theory out of sync!\n";
 				///	return false;
 				//}
-			} else {
+				} else {
 				/*if(g.haspoint(e.from,e.to)){
 				 return false;
 				 }*/
@@ -810,146 +781,81 @@ public:
 				 return false;
 				 }*/
 
-			}
-			
-		}
-		for (int i = 0; i < detectors.size(); i++) {
-			if (!detectors[i]->checkSatisfied()) {
-				cout << "Error! Detector " << i << " unsatisfied\n";
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	bool dbg_solved() {
-#ifdef DEBUG_GRAPH
-		for(int i = 0;i<points.size();i++) {
-			if(points[i].var<0)
-			continue;
-			PointData & e = points[i];
-			lbool val = value(e.var);
-			assert(val!=l_Undef);
-			int pointset = e.pointset;
-			if(val==l_True) {
-				assert(under_sets[pointset].pointEnabled(e.pointset_index));
-				assert(over_sets[pointset].haspoint(e.pointset_index));
-			} else {
-				assert(!under_sets[pointset].haspoint(e.pointset_index));
-				assert(!over_sets[pointset].haspoint(e.pointset_index));
-			}
+				}
 
+			}
+			for (int i = 0; i < detectors.size(); i++) {
+				if (!detectors[i]->checkSatisfied()) {
+					cout << "Error! Detector " << i << " unsatisfied\n";
+					return false;
+				}
+			}
+			return true;
 		}
-		assert(check_solved());
+
+		bool dbg_solved() {
+#ifdef DEBUG_GRAPH
+			for(int i = 0;i<points.size();i++) {
+				if(points[i].var<0)
+					continue;
+				PointData & e = points[i];
+				lbool val = value(e.var);
+				assert(val!=l_Undef);
+				int pointset = e.pointset;
+				if(val==l_True) {
+					assert(under_sets[pointset].pointEnabled(e.pointset_index));
+					assert(over_sets[pointset].haspoint(e.pointset_index));
+				} else {
+					assert(!under_sets[pointset].haspoint(e.pointset_index));
+					assert(!over_sets[pointset].haspoint(e.pointset_index));
+				}
+
+			}
+			assert(check_solved());
 
 #endif
-		return true;
-	}
-	
-	void drawCurrent() {
-		
-	}
-	int npoints() {
-		return points.size();
-	}
-	CRef newReasonMarker(int detectorID) {
-		CRef reasonMarker = S->newReasonMarker(this);
-		int mnum = CRef_Undef - reasonMarker;
-		marker_map.growTo(mnum + 1);
-		marker_map[mnum] = detectorID;
-		return reasonMarker;
-	}
-	
-	Lit newPoint(Point<D, T> _point, Var outerVar = var_Undef) {
-		assert(outerVar!=var_Undef);
+			return true;
+		}
+
+		void drawCurrent() {
+
+		}
+		int npoints() {
+			return points.size();
+		}
+		CRef newReasonMarker(int detectorID) {
+			CRef reasonMarker = S->newReasonMarker(this);
+			int mnum = CRef_Undef - reasonMarker;
+			marker_map.growTo(mnum + 1);
+			marker_map[mnum] = detectorID;
+			return reasonMarker;
+		}
+
+		Lit newPoint(Point<D, T> _point, Var outerVar = var_Undef) {
+			assert(outerVar!=var_Undef);
 		/*	if(outerVar==var_Undef)
 		 outerVar = S->newVar();*/
 
-		int index = points.size();
-		points.push_back(PointData());
-		
-		Var v = newVar(outerVar, index, true);
-		
+			int index = points.size();
+			points.push_back(PointData());
+
+			Var v = newVar(outerVar, index, true);
+
 		//num_points++;
-		points[index].var = v;
+			points[index].var = v;
 		//points[index].outerVar =outerVar;
-		points[index].point = _point;
-		points[index].point.setID(index);
-		points[index].id = index;
-		while (under_sets.size() <= pointSet) {
-			under_sets.push_back(under_sets.size());
-		}
-		while (over_sets.size() <= pointSet) {
-			over_sets.push_back(over_sets.size());
-		}
-		
-		int pointsetIndex = under_sets[pointSet].addPoint(points[index].point);
-		points[index].pointset_index = pointsetIndex;
-		under_sets[pointSet].disablePoint(pointsetIndex);
-		int pointsetIndex2 = over_sets[pointSet].addPoint(points[index].point);
-		assert(pointsetIndex == pointsetIndex2);
-		over_sets[pointSet].enablePoint(pointsetIndex);
-		if (pointsetDetectors.size() < nPointSets()) {
-			pointsetDetectors.resize(nPointSets());
-		}
-		
+			points[index].point = _point;
+			points[index].point.setID(index);
+			points[index].id = index;
 		//anyRequiresPropagation=true;
-		requiresPropagation.growTo(nPointSets(), false);
-		if (!requiresPropagation[pointSet]) {
-			requiresPropagation[pointSet] = true;
-			toPropagate.push(pointSet);
+			return mkLit(v, false);
 		}
-		return mkLit(v, false);
-	}
-	
-	void implementConstraints() {
-		if (!S->okay())
-			return;
-	}
-	
-	void convexHullArea(int pointSet, T areaGreaterThan, Var outerVar) {
-		if (convexHullDetectors.size() < nPointSets())
-			convexHullDetectors.resize(nPointSets());
-		if (!convexHullDetectors[pointSet]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet], over_sets[pointSet],
-					this, drand(rnd_seed));
-			pointsetDetectors[pointSet].push_back(convexHull);
-			convexHullDetectors[pointSet] = convexHull;
-			detectors.push_back(convexHull);
+
+		void implementConstraints() {
+			if (!S->okay())
+				return;
 		}
-		convexHullDetectors[pointSet]->addAreaDetectorLit(areaGreaterThan, outerVar);
-	}
-	
-	void convexHullContains(int pointSet, Point<D, T> point, Var outerVar) {
-		if (convexHullDetectors.size() < nPointSets())
-			convexHullDetectors.resize(nPointSets());
-		if (!convexHullDetectors[pointSet]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet], over_sets[pointSet],
-					this, drand(rnd_seed));
-			pointsetDetectors[pointSet].push_back(convexHull);
-			convexHullDetectors[pointSet] = convexHull;
-			detectors.push_back(convexHull);
-		}
-		convexHullDetectors[pointSet]->addPointContainmentLit(point, outerVar);
-	}
-	
-	void pointOnHull(int pointSet, int pointIndex, Var outerVar) {
-		if (convexHullDetectors.size() < nPointSets())
-			convexHullDetectors.resize(nPointSets());
-		if (!convexHullDetectors[pointSet]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet], over_sets[pointSet],
-					this, drand(rnd_seed));
-			pointsetDetectors[pointSet].push_back(convexHull);
-			convexHullDetectors[pointSet] = convexHull;
-			detectors.push_back(convexHull);
-		}
-		
-		convexHullDetectors[pointSet]->addPointOnHullLit(pointIndex, outerVar);
-	}
-	
+
 	/*	void convexHullIntersectsLine(int pointSet,Point<D,T> p,Point<D,T> q,Var outerVar){
 	 convexHullDetectors.growTo(nPointSets(),nullptr);
 	 if(!convexHullDetectors[pointSet]){
@@ -961,64 +867,6 @@ public:
 	 convexHullDetectors[pointSet]->addLineIntersection(LineSegment<D,T>(p,q),outerVar);
 	 }*/
 
-	void convexHullIntersectsPolygon(int pointSet, std::vector<Point<D, T>> & points, Var outerVar, bool inclusive =
-			true) {
-		//For now, polygon must be a simple, CONVEX polygon with clockwise winding
-		if (convexHullDetectors.size() < nPointSets())
-			convexHullDetectors.resize(nPointSets());
-		if (!convexHullDetectors[pointSet]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet], over_sets[pointSet],
-					this, drand(rnd_seed));
-			convexHullDetectors[pointSet] = convexHull;
-			pointsetDetectors[pointSet].push_back(convexHull);
-			detectors.push_back(convexHull);
-		}
-		if (computeWinding(points) == Winding::COUNTER_CLOCKWISE) {
-			fprintf(stderr, "Winding must be clockwise, aborting\n");
-			exit(1);
-		}
-		if (!isConvex(points)) {
-			fprintf(stderr, "Polygon must be convex, aborting\n");
-			exit(1);
-		}
-		NConvexPolygon<D, T> polygon;
-		for (auto & p : points) {
-			polygon.addVertex(p);
-		}
-		if (polygon.size() == 1) {
-			convexHullDetectors[pointSet]->addPointContainmentLit(polygon[0], outerVar, inclusive);
-		} else if (polygon.size() == 2) {
-			convexHullDetectors[pointSet]->addLineIntersectionLit(LineSegment<D, T>(polygon[0], polygon[1]), outerVar,
-					inclusive);
-		} else
-			convexHullDetectors[pointSet]->addConvexIntersectionLit(polygon, outerVar, inclusive);
-	}
-	void convexHullsIntersect(int pointSet1, int pointSet2, Var outerVar, bool inclusive = true) {
-		if (!collisionDetector) {
-			collisionDetector = new ConvexHullCollisionDetector<D, T>(detectors.size(), this, under_sets, over_sets,
-					convexHullDetectors, drand(rnd_seed));
-			detectors.push_back(collisionDetector);
-		}
-		if (!convexHullDetectors[pointSet1]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet1], over_sets[pointSet1],
-					this, drand(rnd_seed));
-			convexHullDetectors[pointSet1] = convexHull;
-			pointsetDetectors[pointSet1].push_back(convexHull);
-			detectors.push_back(convexHull);
-		}
-		if (!convexHullDetectors[pointSet2]) {
-			int detectorID = detectors.size();
-			auto * convexHull = new ConvexHullDetector<D, T>(detectorID, under_sets[pointSet2], over_sets[pointSet2],
-					this, drand(rnd_seed));
-			convexHullDetectors[pointSet2] = convexHull;
-			pointsetDetectors[pointSet2].push_back(convexHull);
-			detectors.push_back(convexHull);
-		}
-		collisionDetector->addCollisionDetectorLit(pointSet1, pointSet2, outerVar, inclusive);
-	}
-	
 	/*void euclidianSteinerTreeSize(int pointSet, int sizeLessThan, Var outerVar){
 	 steinerTreeDetectors.growTo(nPointSets(),nullptr);
 	 if(!steinerTreeDetectors[pointSet]){
@@ -1031,6 +879,5 @@ public:
 	 steinerTreeDetectors[pointSet]->addAreaDetectorLit(sizeLessThan,outerVar);
 	 }*/
 
-};
-
+	};
 #endif /* DGRAPH_H_ */
