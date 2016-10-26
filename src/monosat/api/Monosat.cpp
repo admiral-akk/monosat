@@ -360,6 +360,7 @@ void printStats(SimpSolver* solver) {
 struct MonosatData{
 	Monosat::BVTheorySolver<int64_t> * bv_theory=nullptr;
 	Monosat::FSMTheorySolver * fsm_theory=nullptr;
+	Monosat::GeometryTheorySolver<2,int> * csg_theory=nullptr;
 	PB::PbSolver * pbsolver=nullptr;
 	vec< Monosat::GraphTheorySolver<int64_t> *> graphs;
 	bool last_solution_optimal=true;
@@ -1453,6 +1454,48 @@ int fsmCompositionAccepts(Monosat::SimpSolver * S, Monosat::FSMTheorySolver *  f
 	write_out(S,"accepts_composition %d %d %d %d %d %d %d %d\n",fsmGeneratorID,fsmAcceptorID,gen_startNode,gen_acceptNode,acceptor_startNode,acceptor_acceptNode, stringID, dimacs(l));
 	return toInt(l);
 }
+
+// CSG Interface
+
+
+Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
+	MonosatData * d = (MonosatData*) S->_external_data;
+	if(d->csg_theory)
+		return d->csg_theory;
+
+	Monosat::GeometryTheorySolver<2,int>  * theory = new Monosat::GeometryTheorySolver<2,int>(S);
+	S->addTheory(theory);
+	d->csg_theory=theory;
+	return theory;
+}
+
+  int newPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int> G, int x, int y) {
+  	return 0;
+  }
+
+  int newPolygon(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int> G, int n, int* points) {
+  	return 0;
+  }
+
+  int newPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int> G, int polygon) {
+  	return 0;
+  }
+
+  int newShape(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int> G, int A, int B, int type) {
+  	return 0;
+  }
+
+  int newConditionalPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int> G, int polygon) {
+  	return 0;
+  }
+
+  int newConditionalShape(SolverPtr S,Monosat::GeometryTheorySolver<2,int> G, int A, int B, int type) {
+  	return 0;
+  }
+
+  int shapeContainsPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int> G, int shape, int point) {
+  	return 0;
+  }
 
 //model query
 //Returns 0 for true, 1 for false, 2 for unassigned.

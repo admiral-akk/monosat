@@ -47,6 +47,7 @@ typedef Monosat::GraphTheorySolver<int64_t> * GraphTheorySolver_long;
 typedef Monosat::GraphTheorySolver<double>*  GraphTheorySolver_double;
 typedef Monosat::BVTheorySolver<int64_t>* BVTheoryPtr;
 typedef Monosat::FSMTheorySolver * FSMTheorySolverPtr;
+typedef Monosat::GeometryTheorySolver<2,int> * CSGSolver_2D;
 typedef int64_t Weight;
 #else
 typedef void * SolverPtr;
@@ -54,6 +55,7 @@ typedef void*  BVTheoryPtr;
 typedef void*  GraphTheorySolver_long;
 typedef void*  GraphTheorySolver_double;
 typedef void*  FSMTheorySolverPtr;
+typedef void*  CSGSolver_2D;
 typedef int Var;
 typedef int64_t Weight;
 #endif
@@ -226,6 +228,17 @@ typedef int64_t Weight;
   int newString(SolverPtr S,FSMTheorySolverPtr fsmTheory, int * str,int len);
   int fsmAcceptsString(SolverPtr S,FSMTheorySolverPtr fsmTheory, int fsmID, int startNode, int acceptNode,int stringID);
   int fsmCompositionAccepts(Monosat::SimpSolver * S, Monosat::FSMTheorySolver *  fsmTheory,   int fsmGeneratorID,int fsmAcceptorID, int gen_startNode, int gen_acceptNode, int acceptor_startNode, int acceptor_acceptNode, int stringID);
+
+  //theory interface for constructive solid geometry 
+
+  CSGSolver_2D initCSGTheory(SolverPtr S);
+  int newPoint(SolverPtr S,CSGSolver_2D G, int x, int y);
+  int newPolygon(SolverPtr S,CSGSolver_2D G, int n, int* points);
+  int newPrimative(SolverPtr S,CSGSolver_2D G, int polygon);
+  int newShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
+  int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int polygon);
+  int newConditionalShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
+  int shapeContainsPoint(SolverPtr S,CSGSolver_2D G, int shape, int point);
 
   //model query
   //For a given literal (not variable!), returns 0 for true, 1 for false, 2 for unassigned.

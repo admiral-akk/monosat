@@ -18,15 +18,18 @@
 #ifndef GEOMETRY_THEORY_H_
 #define GEOMETRY_THEORY_H_
 
+template<unsigned int D, class T>
+class GeometryTheorySolver;
 #include "monosat/utils/System.h"
 #include "monosat/core/Theory.h"
+#include "monosat/core/Config.h"
 #include "monosat/mtl/Map.h"
 #include "GeometryTypes.h"
 #include "monosat/utils/System.h"
 #include "monosat/core/Solver.h"
-#include "monosat/core/Config.h"
 #include "GeometryDetector.h"
 #include "CSG.h"
+#include <gmpxx.h>
 #include "ConvexHullDetector.h"
 #include "ConvexHullCollisionDetector.h"
 
@@ -35,8 +38,9 @@
 #endif
 
  using namespace Monosat;
+namespace Monosat {
 
-template<unsigned int D, class T = double>
+template<unsigned int D = 2, class T = int>
  class GeometryTheorySolver: public Theory {
 
  public:
@@ -880,4 +884,5 @@ public:
 	 }*/
 
 	};
+}
 #endif /* DGRAPH_H_ */

@@ -54,6 +54,7 @@ c_graph_p = c_void_p
 c_bv_p = c_void_p
 c_fsm_theory_p = c_void_p
 c_fsm_p = c_void_p
+c_csg_theory_p = c_void_p
 
 c_literal = c_int
 c_literal_p = c_int_p
@@ -393,6 +394,30 @@ class Monosat(metaclass=Singleton):
 
         self.monosat_c.getModel_Path_EdgeLits.argtypes=[c_solver_p,c_graph_p, c_literal, c_int, c_int_p]
         self.monosat_c.getModel_Path_EdgeLits.restype=c_int 
+
+        self.monosat_c.initCSGTheory.argtypes=[c_solver_p]
+        self.monosat_c.initCSGTheory.restype=c_csg_theory_p 
+
+        self.monosat_c.newPoint.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
+        self.monosat_c.newPoint.restype=c_int
+
+        self.monosat_c.newPolygon.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int_p]
+        self.monosat_c.newPolygon.restype=c_int
+
+        self.monosat_c.newPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int]
+        self.monosat_c.newPrimative.restype=c_int
+
+        self.monosat_c.newShape.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int, c_int]
+        self.monosat_c.newShape.restype=c_int
+
+        self.monosat_c.newConditionalPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int]
+        self.monosat_c.newConditionalPrimative.restype=c_literal
+
+        self.monosat_c.newConditionalShape.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int, c_int]
+        self.monosat_c.newConditionalShape.restype=c_literal
+
+        self.monosat_c.shapeContainsPoint.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
+        self.monosat_c.shapeContainsPoint.restype=c_literal
 
 
         self.newSolver()
@@ -1003,6 +1028,43 @@ class Monosat(metaclass=Singleton):
     def fsmCompositionAccepts(self, fsm_generator_id, fsm_acceptor_id, gen_starting_state, gen_accepting_state, accept_starting_state, accept_accepting_state, strID):
         return self.monosat_c.fsmCompositionAccepts(self.solver._ptr,null_ptr, fsm_generator_id,fsm_acceptor_id, gen_starting_state, gen_accepting_state, accept_starting_state, accept_accepting_state, strID)
 
+    #Monosat csg interface
+
+    def initCSGTheory(self):
+        self.backtrack()
+        return self.monosat_c.initCSGTheory.argtypes(self.solver._ptr)
+
+    def newPoint(self, csg, x, y):
+        self.backtrack()
+        return self.monosat_c.newPoint.argtypes(self.solver._ptr, csg, x, y)
+        
+    # pointArray is an array of point numbers
+    def newPolygon(self, csg, pointArray):
+        self.backtrack()
+        lp = self.getIntArray(pointArray)
+        return self.monosat_c.newPolygon.argtypes(self.solver._ptr, csg, lp, len(pointArray))
+
+    def newPrimative(self, csg, polygon):
+        self.backtrack()
+        return self.monosat_c.newPrimative.argtypes(self.solver._ptr, csg, polygon)
+
+    # opType: 0 - Union, 1 - Intersection, 2 - Difference
+    def newShape(self, csg, A, B, opType):
+        self.backtrack()
+        return self.monosat_c.newShape.argtypes(self.solver._ptr, csg, A, B, opType)
+
+    def newConditionalPrimative(self, csg, polygon):
+        self.backtrack()
+        return self.monosat_c.newConditionalPrimative.argtypes(self.solver._ptr, csg, polygon)
+
+    # opType: 0 - Union, 1 - Intersection, 2 - Difference
+    def newConditionalShape(self, csg, A, B, opType):
+        self.backtrack()
+        return self.monosat_c.newConditionalShape.argtypes(self.solver._ptr, csg, A, B, opType)
+
+    def shapeContainsPoint(self, csg, shape, point):
+        self.backtrack()
+        return self.monosat_c.shapeContainsPoint.argtypes(self.solver._ptr, csg, shape, point)
 
     #Monosat graph interface
     
