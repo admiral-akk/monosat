@@ -30,8 +30,6 @@ class GeometryTheorySolver;
 #include "GeometryDetector.h"
 #include "CSG.h"
 #include <gmpxx.h>
-#include "ConvexHullDetector.h"
-#include "ConvexHullCollisionDetector.h"
 
 #ifndef NDEBUG
 #include <cstdio>
@@ -64,7 +62,6 @@ template<unsigned int D = 2, class T = int>
  		Var var;
  		Assignment(bool isPoint, bool _assign, int pointID, Var v) :
  		isPoint(isPoint), assign(_assign), pointID(pointID), var(v) {
-
  		}
  		Assignment() :
  		isPoint(false), assign(false), pointID(0), var(var_Undef) {
@@ -627,17 +624,17 @@ public:
 		++itp;
 		/*if(	++itp>=955880){
 		 int a =1;
-		 cout<<"pause\n";
+		 std::cout<<"pause\n";
 		 for(int i = 0;i<vars.size();i++){
 		 if(value(i)!= dbg_value(i)){
-		 cout << "Error! Theory unsolved or out of sync: theory var " << i;
+		 std::cout << "Error! Theory unsolved or out of sync: theory var " << i;
 		 if(isPointVar(i)){
-		 cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
+		 std::cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
 		 }else{
-		 cout << " for detector " << getDetector(i);
+		 std::cout << " for detector " << getDetector(i);
 		 }
-		 cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
-		 cout<< "!\n";
+		 std::cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
+		 std::cout<< "!\n";
 		 }
 		 }
 		 }*/
@@ -685,22 +682,22 @@ public:
 		 detectors_to_check.clear();
 		/*	if(	itp>=955879){
 		 int a =1;
-		 cout<<"pause after\n";
+		 std::cout<<"pause after\n";
 		 for(int i = 0;i<vars.size();i++){
 		 if(value(i)!= dbg_value(i)){
-		 cout << "Error! Theory unsolved or out of sync: theory var " << i;
+		 std::cout << "Error! Theory unsolved or out of sync: theory var " << i;
 		 if(isPointVar(i)){
-		 cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
+		 std::cout << " for point " << getPointID(i) << " " << points[ getPointID(i) ].point;
 		 }else{
-		 cout << " for detector " << getDetector(i);
+		 std::cout << " for detector " << getDetector(i);
 		 }
-		 cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
-		 cout<< "!\n";
+		 std::cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
+		 std::cout<< "!\n";
 		 }
 		 }
 		 for(int i = 0;i<detectors.size();i++){
 		 if(!detectors[i]->checkSatisfied()){
-		 cout<< "detector " << i << "unsat\n";
+		 std::cout<< "detector " << i << "unsat\n";
 		 exit(3);
 		 }
 		 }
@@ -733,15 +730,15 @@ public:
 			dbg_full_sync();
 			for (int i = 0; i < vars.size(); i++) {
 				if (value(i) != dbg_value(i)) {
-					cout << "Error! Theory unsolved or out of sync: theory var " << i;
+					std::cout << "Error! Theory unsolved or out of sync: theory var " << i;
 
 					if (isPointVar(i)) {
-						cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
+						std::cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
 					} else {
-						cout << " for detector " << getDetector(i);
+						std::cout << " for detector " << getDetector(i);
 					}
-					cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
-					cout << "!\n";
+					std::cout << " has value " << toInt(value(i)) << " but expected value was " << toInt(dbg_value(i));
+					std::cout << "!\n";
 					return false;
 				}
 			}
@@ -751,7 +748,7 @@ public:
 				PointData & e = points[i];
 				lbool val = value(e.var);
 				if (val == l_Undef) {
-					cout << "Error! Theory unsolved!\n";
+					std::cout << "Error! Theory unsolved!\n";
 					return false;
 				}
 				if (val == l_True) {
@@ -762,11 +759,11 @@ public:
 				 return false;
 				 }*/
 				//if (!under_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	cout << "Error! Theory out of sync!\n";
+				//	std::cout << "Error! Theory out of sync!\n";
 				//	return false;
 				//}
 				//if (!over_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	cout << "Error! Theory out of sync!\n";
+				//	std::cout << "Error! Theory out of sync!\n";
 				///	return false;
 				//}
 				} else {
@@ -774,11 +771,11 @@ public:
 				 return false;
 				 }*/
 				//if (under_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	cout << "Error! Theory out of sync!\n";
+				//	std::cout << "Error! Theory out of sync!\n";
 				//	return false;
 				//}
 				//if (over_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	cout << "Error! Theory out of sync!\n";
+				//	std::cout << "Error! Theory out of sync!\n";
 				//	return false;
 				//}
 				/*if(over.haspoint(e.from,e.to)){
@@ -790,7 +787,7 @@ public:
 			}
 			for (int i = 0; i < detectors.size(); i++) {
 				if (!detectors[i]->checkSatisfied()) {
-					cout << "Error! Detector " << i << " unsatisfied\n";
+					std::cout << "Error! Detector " << i << " unsatisfied\n";
 					return false;
 				}
 			}
