@@ -1,6 +1,6 @@
 #The MIT License (MIT)
 #
-#Copyright (c) 2014, Sam Bayless
+#Copyright (c) 2016, Kuba Karpierz
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 #associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -17,10 +17,10 @@
 #DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 #OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from enum import Enum
+import monosat.monosat_c
+import sys
+from monosat.bvtheory import BitVector
 from monosat.logic import *
-debug=False   
-#Collects a set of graphs to encode together into a formula
 from monosat.manager import Manager
 class GeometryManager(metaclass=Manager):
     

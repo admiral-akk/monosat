@@ -1032,39 +1032,39 @@ class Monosat(metaclass=Singleton):
 
     def initCSGTheory(self):
         self.backtrack()
-        return self.monosat_c.initCSGTheory.argtypes(self.solver._ptr)
+        return self.monosat_c.initCSGTheory(self.solver._ptr)
 
     def newPoint(self, csg, x, y):
         self.backtrack()
-        return self.monosat_c.newPoint.argtypes(self.solver._ptr, csg, x, y)
+        return self.monosat_c.newPoint(self.solver._ptr, csg, x, y)
         
     # pointArray is an array of point numbers
     def newPolygon(self, csg, pointArray):
         self.backtrack()
         lp = self.getIntArray(pointArray)
-        return self.monosat_c.newPolygon.argtypes(self.solver._ptr, csg, lp, len(pointArray))
+        return self.monosat_c.newPolygon(self.solver._ptr, csg, lp, len(pointArray))
 
     def newPrimative(self, csg, polygon):
         self.backtrack()
-        return self.monosat_c.newPrimative.argtypes(self.solver._ptr, csg, polygon)
+        return self.monosat_c.newPrimative(self.solver._ptr, csg, polygon)
 
     # opType: 0 - Union, 1 - Intersection, 2 - Difference
     def newShape(self, csg, A, B, opType):
         self.backtrack()
-        return self.monosat_c.newShape.argtypes(self.solver._ptr, csg, A, B, opType)
+        return self.monosat_c.newShape(self.solver._ptr, csg, A, B, opType)
 
     def newConditionalPrimative(self, csg, polygon):
         self.backtrack()
-        return self.monosat_c.newConditionalPrimative.argtypes(self.solver._ptr, csg, polygon)
+        return self.monosat_c.newConditionalPrimative(self.solver._ptr, csg, polygon)
 
     # opType: 0 - Union, 1 - Intersection, 2 - Difference
     def newConditionalShape(self, csg, A, B, opType):
         self.backtrack()
-        return self.monosat_c.newConditionalShape.argtypes(self.solver._ptr, csg, A, B, opType)
+        return self.monosat_c.newConditionalShape(self.solver._ptr, csg, A, B, opType)
 
     def shapeContainsPoint(self, csg, shape, point):
         self.backtrack()
-        return self.monosat_c.shapeContainsPoint.argtypes(self.solver._ptr, csg, shape, point)
+        return self.monosat_c.shapeContainsPoint(self.solver._ptr, csg, shape, point)
 
     #Monosat graph interface
     
