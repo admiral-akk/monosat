@@ -182,38 +182,26 @@ public:
 	
 	int addShape(int AIndex, int BIndex, int type) {
 		assert(-1 < type && type < 3);
-		if (AIndex < 0) {
-			AIndex = -(AIndex+1);
-		}
-		if (BIndex < 0) {
-			BIndex = -(BIndex+1);
-		}
 		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
 		int n = over_csg.shapes.size()-1;
-		over_csg.shapes[AIndex]->parentVector->push_back(over_csg.shapes[n]);
-		over_csg.shapes[BIndex]->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.getNode(AIndex)->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.getNode(BIndex)->parentVector->push_back(over_csg.shapes[n]);
 		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
-		under_csg.shapes[AIndex]->parentVector->push_back(under_csg.shapes[n]);
-		under_csg.shapes[BIndex]->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
 		return -n-1;
 	}
 	
 	int addConditionalShape(int AIndex, int BIndex, int type, Var v) {
 		assert(-1 < type && type < 3);
-		if (AIndex < 0) {
-			AIndex = -(AIndex+1);
-		}
-		if (BIndex < 0) {
-			BIndex = -(BIndex+1);
-		}
 		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(v,true)));
 		over_csg.varToIndex[v] = over_csg.shapes.size() - 1;
 		int n = over_csg.shapes.size()-1;
-		over_csg.shapes[AIndex]->parentVector->push_back(over_csg.shapes[n]);
-		over_csg.shapes[BIndex]->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.getNode(AIndex)->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.getNode(BIndex)->parentVector->push_back(over_csg.shapes[n]);
 		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(v,false)));
-		under_csg.shapes[AIndex]->parentVector->push_back(under_csg.shapes[n]);
-		under_csg.shapes[BIndex]->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
 		under_csg.varToIndex[v] = under_csg.shapes.size() - 1;
 	}
 
