@@ -23,17 +23,17 @@ from monosat.bvtheory import BitVector
 from monosat.logic import *
 from monosat.manager import Manager
 class GeometryManager(metaclass=Manager):
-    
+
     def  __init__(self):
         self.points = []
         self.shapes = []
-        self.polygons=[]   
+        self.planes = []   
         self.csg = 0
     
     def clear(self):
         self.points = []
-        self.shapes = []
-        self.polygons=[]   
+        self.planes = []
+        self.shapes = []   
     
     def addPoint(self, p):
         self.points.append(p)
@@ -57,12 +57,37 @@ class CSG():
         self.csg = self._monosat.initCSGTheory()
 
         self.points = []
-        self.shapes = []
-        self.polygons=[] 
+        self.planes = []
+        self.shapes = []   
+
 
     def addPoint(self, x, y):  
-        n = self._monosat.newPoint(self.graph, x, y)        
-        self.nodes.append((x,y))        
+        n = self._monosat.newPoint(self.csg, x, y)        
+        self.points.append([x,y])        
         return n
 
-    
+    def addPlane(self, point, vector):  
+        n = self._monosat.newPlane(self.csg, point, vector)    
+        self.planes.append([point, vector])        
+        return n
+
+    def addPrimative(self, planeArr):  
+        n = self._monosat.newPrimative(self.csg, planeArr)    
+        self.shapes.append(n)        
+        return n
+
+    def addConditionalPrimative(self, planeArr):  
+        n = self._monosat.newConditionalPrimative(self.csg, planeArr)    
+        self.shapes.append(n)        
+        return n
+
+    def addShape(self, A, B, typeIndex):  
+        n = self._monosat.newShape(self.csg, A, B, typeIndex)    
+        self.shapes.append(n)        
+        return n
+
+    def addConditionalShape(self, A, B, typeIndex):  
+        n = self._monosat.newConditionalShape(self.csg, A, B, typeIndex)    
+        self.shapes.append(n)        
+        return n
+

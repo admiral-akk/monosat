@@ -295,6 +295,37 @@ struct Point {
 		return distance;
 	}
 };
+
+template<unsigned int D, class T>
+struct Plane {
+	Point<D,T>* point;
+	Point<D,T>* vector;
+	Plane(Point<D,T>* p, Point<D,T>* v) {
+		this->point = p;
+		this->vector = v;
+	}
+
+	bool contains(Point<D,T>* p) {
+		return true;
+	}
+};
+
+template<unsigned int D, class T>
+struct PlanePolygon {
+	std::vector<Plane<D,T>*>* edges;
+	PlanePolygon(std::vector<Plane<D,T>*>* boundary) {
+		this->edges = boundary;
+	}
+
+	bool contains(Point<D,T>* p) {
+		for (auto plane : edges) {
+			if (!plane.contains())
+				return false;
+		}
+		return true;
+	}
+};
+
 namespace Monosat {
 template<unsigned int D, class T>
 class vec<::Point<D, T>> ;

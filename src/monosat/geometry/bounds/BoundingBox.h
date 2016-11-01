@@ -146,38 +146,44 @@ public:
 		
 	}
 };*/
+
 template<unsigned int D, class T>
 class Node;
+
+template<unsigned int D, class T>
+class NodePointer;
 
 template<unsigned int D, class T>
 class BoundingBox {
 
 	private:
-	Node<D,T>* node;
+	std::vector<Node<D,T>>* nodeVector;
+	int nodeIndex;
 	Point<D, T> max_point;
 	Point<D, T> min_point;
 
 public:
 	T getMin(int i) {
-		if (node->conditional == lit_Undef || sign(node->conditional))
+		Node<D,T> node = nodeVector[nodeIndex];
+		if (node.conditional == lit_Undef || sign(node.conditional))
 			return this->min_point[i];
 		else
 			return numeric<T>::infinity();
 	}
 
 	T getMax(int i) {
-		if (node->conditional == lit_Undef || sign(node->conditional))
+		Node<D,T> node = nodeVector[nodeIndex];
+		if (node.conditional == lit_Undef || sign(node.conditional))
 			return this->max_point[i];
 		else
 			return -numeric<T>::infinity();
 	}
 
-	BoundingBox() {
-		this->node = NULL;
-	}
+	BoundingBox() {	}
 
-	BoundingBox(Node<D,T>* owner) {
-		this->node = owner;
+	BoundingBox(std::vector<Node<D,T>>* nodeVec, int owner) {
+		this->nodeIndex = owner;
+		this->nodeVector = nodeVec;
 	}
 
 	ShapeType getType() {
@@ -186,13 +192,10 @@ public:
 	
 	// Returns true if update causes changes
 	bool update() {
+		Node<D,T> nodeVal = nodeVector[nodeIndex];
+		Node<D,T>* node = &nodeVal;
 		bool changes = false;
 		nodeType type = node->type;
-		BoundingBox<D, T> A, B;
-		if (type != Primative) {
-			A = node->left->box; 
-			B = node->right->box; 
-		}
 
 		T newMin, newMax;
 		switch (type) {
@@ -210,8 +213,8 @@ public:
 			}
 			case Union:
 				for (int i = 0; i < D; i++) {
-					newMax = (A.getMax(i) > B.getMax(i)) ? A.getMax(i) : B.getMax(i);
-					newMin = (A.getMin(i) > B.getMin(i)) ? B.getMin(i) : A.getMin(i);
+					newMax = (node->left->box.getMax(i) > node->right->box.getMax(i)) ? node->left->box.getMax(i) : node->right->box.getMax(i);
+					newMin = (node->left->box.getMin(i) > node->right->box.getMin(i)) ? node->right->box.getMin(i) : node->left->box.getMin(i);
 					if (this->max_point[i] != newMax || this->min_point[i] != newMin)
 						changes = true;
 					this->max_point[i] = newMax;
@@ -220,7 +223,7 @@ public:
 				break;
 			case Intersection:
 				for (int i = 0; i < D; i++) {
-					if (A.getMax(i) < A.getMin(i) || B.getMax(i) < B.getMin(i)) {
+					if (node->left->box.getMax(i) < node->left->box.getMin(i) || node->right->box.getMax(i) < node->right->box.getMin(i)) {
 						for (int j = 0; j < D; j++) {
 							if (this->max_point[i] != -numeric<T>::infinity() || this->min_point[i] != numeric<T>::infinity())
 								changes = true;
@@ -230,8 +233,8 @@ public:
 						break;
 					}
 
-					newMax = (A.getMax(i) < B.getMax(i)) ? A.getMax(i) : B.getMax(i);
-					newMin = (A.getMin(i) < B.getMin(i)) ? B.getMin(i) : A.getMin(i);
+					newMax = (node->left->box.getMax(i) < node->right->box.getMax(i)) ? node->left->box.getMax(i) : node->right->box.getMax(i);
+					newMin = (node->left->box.getMin(i) < node->right->box.getMin(i)) ? node->right->box.getMin(i) : node->left->box.getMin(i);
 					if (this->max_point[i] != newMax || this->min_point[i] != newMin)
 						changes = true;
 					this->max_point[i] = newMax;
@@ -240,8 +243,8 @@ public:
 				break;
 			case Difference:
 				for (int i = 0; i < D; i++) {
-					newMax = A.getMax(i);
-					newMin = A.getMin(i);
+					newMax = node->left->box.getMax(i);
+					newMin = node->left->box.getMin(i);
 
 					if (this->max_point[i] != newMax || this->min_point[i] != newMin) 
 						changes = true;
@@ -255,7 +258,8 @@ public:
 		return changes;
 	}
 	bool contains(const Point<D, T> & point, bool inclusive = true) {
-		if (node->conditional == lit_Undef)
+		Node<D,T> node = nodeVector[nodeIndex];
+		if (node.conditional == lit_Undef)
 			return false;
 		if (inclusive) {
 			for (int i = 0; i < D; i++) {

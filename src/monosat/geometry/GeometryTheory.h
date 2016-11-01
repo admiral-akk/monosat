@@ -25,6 +25,7 @@ class GeometryTheorySolver;
 #include "monosat/core/Config.h"
 #include "monosat/mtl/Map.h"
 #include "GeometryTypes.h"
+#include "Polygon.h"
 #include "monosat/utils/System.h"
 #include "monosat/core/Solver.h"
 #include "GeometryDetector.h"
@@ -55,6 +56,10 @@ template<unsigned int D = 2, class T = int>
 
  	CSG<D, T> under_csg;
  	CSG<D, T> over_csg;
+ 	std::vector<Point<D,T>*> points;
+ 	std::vector<Plane<D,T>*> planes;
+ 	std::map<Var, int> varToShape;
+
  	struct Assignment {
  		bool isPoint :1;
  		bool assign :1;
@@ -97,7 +102,6 @@ template<unsigned int D = 2, class T = int>
 		Point<D, T> point;
 	};
 	std::vector<VarData> vars;
-	std::vector<PointData> points;
 	int theory_index=0;
 public:
 	
@@ -139,7 +143,80 @@ public:
 			delete (d);
 		}
 	}
+
+	int addPoint(std::vector<T> v) {
+		assert(D == v.size());
+		Point<D,T>* p = new Point<D,T>(v);
+		points.emplace_back(p);
+		return points.size() - 1;
+	}
+
+	int addPlane(int pointIndex, int vectorIndex) {
+		Plane<D,T>* p = new Plane<D,T>(points[pointIndex], points[vectorIndex]);
+		planes.emplace_back(p);
+		return planes.size() - 1;
+	}
+
+	int addPrimative(std::vector<int>* planeIndexVector) {
+		std::vector<Plane<D,T>*>* boundary = new std::vector<Plane<D,T>*>();
+		for (auto index : *planeIndexVector) {
+			boundary->emplace_back(planes[index]);
+		}
+		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
+		over_csg.shapes.emplace_back(new Node<D,T>(p));
+		under_csg.shapes.emplace_back(new Node<D,T>(p));
+		return -over_csg.shapes.size();
+	}
+
+	void addConditionalPrimative(std::vector<int>* planeIndexVector, Var v) {
+		std::vector<Plane<D,T>*>* boundary = new std::vector<Plane<D,T>*>();
+		for (auto index : *planeIndexVector) {
+			boundary->emplace_back(planes[index]);
+		}
+		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
+		over_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(v,true)));
+		over_csg.varToIndex[v] = over_csg.shapes.size() - 1;
+		under_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(v,false)));
+		under_csg.varToIndex[v] = under_csg.shapes.size() - 1;
+	}
 	
+	int addShape(int AIndex, int BIndex, int type) {
+		assert(-1 < type && type < 3);
+		if (AIndex < 0) {
+			AIndex = -(AIndex+1);
+		}
+		if (BIndex < 0) {
+			BIndex = -(BIndex+1);
+		}
+		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
+		int n = over_csg.shapes.size()-1;
+		over_csg.shapes[AIndex]->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.shapes[BIndex]->parentVector->push_back(over_csg.shapes[n]);
+		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
+		under_csg.shapes[AIndex]->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.shapes[BIndex]->parentVector->push_back(under_csg.shapes[n]);
+		return -n-1;
+	}
+	
+	int addConditionalShape(int AIndex, int BIndex, int type, Var v) {
+		assert(-1 < type && type < 3);
+		if (AIndex < 0) {
+			AIndex = -(AIndex+1);
+		}
+		if (BIndex < 0) {
+			BIndex = -(BIndex+1);
+		}
+		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(v,true)));
+		over_csg.varToIndex[v] = over_csg.shapes.size() - 1;
+		int n = over_csg.shapes.size()-1;
+		over_csg.shapes[AIndex]->parentVector->push_back(over_csg.shapes[n]);
+		over_csg.shapes[BIndex]->parentVector->push_back(over_csg.shapes[n]);
+		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(v,false)));
+		under_csg.shapes[AIndex]->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.shapes[BIndex]->parentVector->push_back(under_csg.shapes[n]);
+		under_csg.varToIndex[v] = under_csg.shapes.size() - 1;
+	}
+
 	void printStats(int detailLevel) {
 		if (detailLevel > 0) {
 			for (GeometryDetector * d : detectors)
@@ -733,7 +810,7 @@ public:
 					std::cout << "Error! Theory unsolved or out of sync: theory var " << i;
 
 					if (isPointVar(i)) {
-						std::cout << " for point " << getPointID(i) << " " << points[getPointID(i)].point;
+						std::cout << " for point " << getPointID(i) << " " << points[getPointID(i)];
 					} else {
 						std::cout << " for detector " << getDetector(i);
 					}
@@ -741,49 +818,6 @@ public:
 					std::cout << "!\n";
 					return false;
 				}
-			}
-			for (int i = 0; i < points.size(); i++) {
-				if (points[i].var < 0)
-					continue;
-				PointData & e = points[i];
-				lbool val = value(e.var);
-				if (val == l_Undef) {
-					std::cout << "Error! Theory unsolved!\n";
-					return false;
-				}
-				if (val == l_True) {
-				/*	if(!g.haspoint(e.from,e.to)){
-				 return false;
-				 }
-				 if(!over.haspoint(e.from,e.to)){
-				 return false;
-				 }*/
-				//if (!under_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	std::cout << "Error! Theory out of sync!\n";
-				//	return false;
-				//}
-				//if (!over_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	std::cout << "Error! Theory out of sync!\n";
-				///	return false;
-				//}
-				} else {
-				/*if(g.haspoint(e.from,e.to)){
-				 return false;
-				 }*/
-				//if (under_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	std::cout << "Error! Theory out of sync!\n";
-				//	return false;
-				//}
-				//if (over_sets[pointset].pointEnabled(e.pointset_index)) {
-				//	std::cout << "Error! Theory out of sync!\n";
-				//	return false;
-				//}
-				/*if(over.haspoint(e.from,e.to)){
-				 return false;
-				 }*/
-
-				}
-
 			}
 			for (int i = 0; i < detectors.size(); i++) {
 				if (!detectors[i]->checkSatisfied()) {

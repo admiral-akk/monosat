@@ -1459,7 +1459,6 @@ int fsmCompositionAccepts(Monosat::SimpSolver * S, Monosat::FSMTheorySolver *  f
 
 
 Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
-  	std::cout << "HELLO WORLD\n";
 	MonosatData * d = (MonosatData*) S->_external_data;
 	if(d->csg_theory)
 		return d->csg_theory;
@@ -1471,27 +1470,40 @@ Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
 }
 
   int newPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int x, int y) {
-  	return 0;
+  	std::vector<int> v = {x, y};
+  	return G->addPoint(v);
   }
 
-  int newPolygon(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int n, int* points) {
-  	return 0;
+
+  int newPlane(SolverPtr S,CSGSolver_2D G, int pointIndex, int vectorIndex) {
+  	return G->addPlane(pointIndex, vectorIndex);
   }
 
-  int newPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int>* G, int polygon) {
-  	return 0;
+  int newPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int>* G, int* planes, int length) {
+  	std::vector<int>* planeIndexVector = new std::vector<int>(planes, planes+length);
+  	int val = G->addPrimative(planeIndexVector);
+  	delete planeIndexVector;
+  	return val;
   }
 
   int newShape(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int A, int B, int type) {
-  	return 0;
+  	return G->addShape(A, B, type);
   }
 
-  int newConditionalPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int>* G, int polygon) {
-  	return 0;
+  int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length) {
+	Var v = newVar(S);
+	Lit l = mkLit(v);
+  	std::vector<int>* planeIndexVector = new std::vector<int>(planes, planes+length);
+  	G->addConditionalPrimative(planeIndexVector, v);
+  	delete planeIndexVector;
+	return toInt(l);
   }
 
-  int newConditionalShape(SolverPtr S,Monosat::GeometryTheorySolver<2,int>* G, int A, int B, int type) {
-  	return 0;
+  int newConditionalShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type) {
+	Var v = newVar(S);
+	Lit l = mkLit(v);
+  	G->addConditionalShape(A, B, type, v);
+	return toInt(l);
   }
 
   int shapeContainsPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int shape, int point) {

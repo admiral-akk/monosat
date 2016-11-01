@@ -233,10 +233,10 @@ typedef int64_t Weight;
 
   CSGSolver_2D initCSGTheory(SolverPtr S);
   int newPoint(SolverPtr S,CSGSolver_2D G, int x, int y);
-  int newPolygon(SolverPtr S,CSGSolver_2D G, int n, int* points);
-  int newPrimative(SolverPtr S,CSGSolver_2D G, int polygon);
+  int newPlane(SolverPtr S,CSGSolver_2D G, int pointIndex, int vectorIndex);
+  int newPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
   int newShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
-  int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int polygon);
+  int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
   int newConditionalShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
   int shapeContainsPoint(SolverPtr S,CSGSolver_2D G, int shape, int point);
 

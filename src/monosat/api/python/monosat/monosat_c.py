@@ -401,16 +401,16 @@ class Monosat(metaclass=Singleton):
         self.monosat_c.newPoint.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
         self.monosat_c.newPoint.restype=c_int
 
-        self.monosat_c.newPolygon.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int_p]
-        self.monosat_c.newPolygon.restype=c_int
+        self.monosat_c.newPlane.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
+        self.monosat_c.newPlane.restype=c_int
 
-        self.monosat_c.newPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int]
+        self.monosat_c.newPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int_p, c_int]
         self.monosat_c.newPrimative.restype=c_int
 
         self.monosat_c.newShape.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int, c_int]
         self.monosat_c.newShape.restype=c_int
 
-        self.monosat_c.newConditionalPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int]
+        self.monosat_c.newConditionalPrimative.argtypes=[c_solver_p, c_csg_theory_p, c_int_p, c_int]
         self.monosat_c.newConditionalPrimative.restype=c_literal
 
         self.monosat_c.newConditionalShape.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int, c_int]
@@ -1038,24 +1038,24 @@ class Monosat(metaclass=Singleton):
         self.backtrack()
         return self.monosat_c.newPoint(self.solver._ptr, csg, x, y)
         
-    # pointArray is an array of point numbers
-    def newPolygon(self, csg, pointArray):
+    def newPlane(self, csg, point, vector):
         self.backtrack()
-        lp = self.getIntArray(pointArray)
-        return self.monosat_c.newPolygon(self.solver._ptr, csg, lp, len(pointArray))
+        return self.monosat_c.newPlane(self.solver._ptr, csg, point, vector)
 
-    def newPrimative(self, csg, polygon):
+    def newPrimative(self, csg, planeArr):
         self.backtrack()
-        return self.monosat_c.newPrimative(self.solver._ptr, csg, polygon)
+        lp = self.getIntArray(planeArr)
+        return self.monosat_c.newPrimative(self.solver._ptr, csg, lp, len(lp))
 
     # opType: 0 - Union, 1 - Intersection, 2 - Difference
     def newShape(self, csg, A, B, opType):
         self.backtrack()
         return self.monosat_c.newShape(self.solver._ptr, csg, A, B, opType)
 
-    def newConditionalPrimative(self, csg, polygon):
+    def newConditionalPrimative(self, csg, planeArr):
         self.backtrack()
-        return self.monosat_c.newConditionalPrimative(self.solver._ptr, csg, polygon)
+        lp = self.getIntArray(planeArr)
+        return self.monosat_c.newConditionalPrimative(self.solver._ptr, csg, lp, len(lp))
 
     # opType: 0 - Union, 1 - Intersection, 2 - Difference
     def newConditionalShape(self, csg, A, B, opType):
