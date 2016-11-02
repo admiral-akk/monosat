@@ -318,8 +318,8 @@ struct PlanePolygon {
 	}
 
 	bool contains(Point<D,T>* p) {
-		for (auto plane : edges) {
-			if (!plane.contains())
+		for (auto plane : *edges) {
+			if (!plane->contains(p))
 				return false;
 		}
 		return true;

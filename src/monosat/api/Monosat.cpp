@@ -1506,8 +1506,11 @@ Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
 	return toInt(l);
   }
 
-  int shapeContainsPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int shape, int point) {
-  	return 0;
+  int newShapeContainsPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int shape, int point) {
+	Var v = newVar(S);
+	Lit l = mkLit(v);
+  	G->addShapeContainsPoint(shape, point, v);
+	return toInt(l);
   }
 
 //model query

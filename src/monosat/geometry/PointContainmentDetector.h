@@ -25,21 +25,23 @@
 #include "GeometryDetector.h"
 #include "monosat/core/Config.h"
 #include "CSG.h"
+#include "CSGTypes.h"
 #include <map>
 using namespace Monosat;
 
 template<unsigned int D, class T>
-class PointContainsDetector: public GeometryDetector {
+class PointContainmentDetector : public GeometryDetector {
 
 private: 
 	
-	Node* under;
-	Node* over;
+	Node<D,T>* under;
+	Node<D,T>* over;
+	
 	CSG<D,T>* under_csg;
 	CSG<D,T>* over_csg;
-	std::map<Node*,bool> under_cache;
-	std::map<Node*,bool> over_cache;
-	Point<D, T> p;
+	std::map<Node<D,T>*,bool> under_cache;
+	std::map<Node<D,T>*,bool> over_cache;
+	Point<D, T>* p;
 	Lit l;
  	
 	//
@@ -50,47 +52,31 @@ private:
 	// Initialization
 	//
 
-	void initialize(Node* root, std::map<Node*,bool>& cache) {
-		if (!root->box.contains(p)) {
-			cache[root] = false;
-			return;
-		}
-		switch (type) {
+	void initialize(Node<D,T>* root, std::map<Node<D,T>*,bool>& cache) {
+		switch (root->type) {
 			case Primative:
-				cache[root] = root.p.contains(p);
+				cache[root] = root->p->contains(p);
 				break;
 			case Union:
 				if (!cache.count(root->left))
 					initialize(root->left, cache);
-				if (cache[root->left])
-					cache[root] = true 
-				else {
-					if (!cache.count(root->right))
-						initialize(root->right, cache);
-					cache[root] = cache[root->right];
-				}
+				if (!cache.count(root->right))
+					initialize(root->right, cache);
+				cache[root] = cache[root->left] || cache[root->right];
 				break;
-			case Intersect:
+			case Intersection:
 				if (!cache.count(root->left))
 					initialize(root->left, cache);
-				if (!cache[root->left])
-					cache[root] = false 
-				else {
-					if (!cache.count(root->right))
-						initialize(root->right, cache);
-					cache[root] = cache[root->right];
-				}
+				if (!cache.count(root->right))
+					initialize(root->right, cache);
+				cache[root] = cache[root->left] && cache[root->right];
 				break;
 			case Difference:
 				if (!cache.count(root->left))
 					initialize(root->left, cache);
-				if (!cache[root->left])
-					cache[root] = false 
-				else {
-					if (!cache.count(root->right))
-						initialize(root->right, cache);
-					cache[root] = !cache[root->right];
-				}
+				if (!cache.count(root->right))
+					initialize(root->right, cache);
+				cache[root] = cache[root->left] && !cache[root->right];
 				break;
 			default:
 				break;
@@ -106,156 +92,142 @@ private:
 	// Updates
 	//
 
-	void update(Node* root, std::map<Node*,bool>& cache, Node* head) {
-		if (!root) 
+	void update(Node<D,T>* root, std::map<Node<D,T>*,bool>& cache) {
+		if (!cache.count(root)) 
 			return;
 		bool old = cache[root];
 		initialize(root, cache);
-		if (root == head || old == cache[root])
+		if (old == cache[root])
 			return;
-		update(root->parent, cache, head); 
+		for (auto node : *(root->parentVector))
+			update(node, cache); 
 	}
 
 	void update(Var v) {
-		update(under_csg->boolSwitchMap[v], under_cache, under);
-		update(over_csg->boolSwitchMap[v], over_cache, over);
+		update(under_csg->getNode(v), under_cache);
+		update(over_csg->getNode(v), over_cache);
 	}
 
 	//
 	// Clause Learning
 	//
 
-	// Returns learned clause in conflict
-	void learnClause(Node* root, bool containsValue, vec<Lit> & conflict, std::map<Node*,bool>& cache) {
-		if (containsValue) {
+	void appendVector(vec<Lit>& target, vec<Lit>& toAppend) {
+		while (toAppend.size()) {
+			target.push(toAppend.last());
+			toAppend.pop();
+		}
+	}
 
-			// We need a clause that will stop the root from containing the point
-
-			if (cache[root] && root->conditional != lit_Undef && sign(root->conditional)) {
-				// Simplest clause is to shut this node off.
-				conflict.push(~root->conditional);
-				return;
-			}
-
-			switch (root->type) {
-
-				case Union:
-					// Take the shorter of the two clauses the children produce
-					vec<Lit> temp_A = new vec<Lit>();
-					vec<Lit> temp_B = new vec<Lit>();
-					learnClause(root->left,containsValue,temp_A);
-					learnClause(root->right,containsValue,temp_B);
-					if (temp_A.size() < temp_B.size()) {
-						while (temp_A.size()) {
-							conflict.push(temp_A.pop());
-						}
-					} else {
-						while (temp_B.size()) {
-							conflict.push(temp_B.pop());
-						}
-					}
-					delete temp_A;
-					delete temp_B;
-					return;
-
-				case Intersection:
-					// If either child doesn't contain the point, neither will this node
-					learnClause(root->left,containsValue,conflict))
-					learnClause(root->right,containsValue,conflict)
-					return;
-
-				case Difference:
-
-					// If either the left doesn't contain it, or the right does, then this node won't contain it
-					learnClause(root->left,containsValue,conflict))
-					learnClause(root->right,!containsValue,conflict)
-					return;
-
-				case Primative:
-					// At this point, the primative cannot contain the point, so there's nothing we can return to learn.
-					return;
-				default:
+	void appendSmallerVector(vec<Lit>& target, vec<Lit>& toAppend1, vec<Lit>& toAppend2) {
+		if (toAppend1.size() < toAppend2.size()) {
+			while (toAppend1.size()) {
+				target.push(toAppend1.last());
+				toAppend1.pop();
 			}
 		} else {
-
-			// We need a clause that will force the root to contain the point
-
-			if (cache[root] && root->conditional != lit_Undef && !sign(root->conditional)) {
-				// Simplest clause is to turn this node on.
-				conflict.push(root->conditional);
-				return;
-			}
-
-			switch (root->type) {
-
-				case Union:
-					// If either child contains the point, then so will this node
-					learnClause(root->left,containsValue,conflict))
-					learnClause(root->right,containsValue,conflict)
-					return;
-
-				case Intersection:
-					// Take the shorter of the two clauses the children produce
-					vec<Lit> temp_A = new vec<Lit>();
-					vec<Lit> temp_B = new vec<Lit>();
-					learnClause(root->left,containsValue,temp_A);
-					learnClause(root->right,containsValue,temp_B);
-					if (temp_A.size() < temp_B.size()) {
-						while (temp_A.size()) {
-							conflict.push(temp_A.pop());
-						}
-					} else {
-						while (temp_B.size()) {
-							conflict.push(temp_B.pop());
-						}
-					}
-					delete temp_A;
-					delete temp_B;
-					return;
-
-				case Difference:
-					// Take the shorter of the two clauses the children produce
-					vec<Lit> temp_A = new vec<Lit>();
-					vec<Lit> temp_B = new vec<Lit>();
-					learnClause(root->left,containsValue,temp_A);
-					learnClause(root->right,!containsValue,temp_B);
-					if (temp_A.size() < temp_B.size()) {
-						while (temp_A.size()) {
-							conflict.push(temp_A.pop());
-						}
-					} else {
-						while (temp_B.size()) {
-							conflict.push(temp_B.pop());
-						}
-					}
-					delete temp_A;
-					delete temp_B;
-					return;
-					
-				case Primative:
-					// At this point, the primative cannot contain the point, so there's nothing we can return to learn.
-					return;
-				default:
+			while (toAppend2.size()) {
+				target.push(toAppend2.last());
+				toAppend2.pop();
 			}
 		}
 	}
 
+
+	// Learn clause that must be true for the point to be contained
+	void learnPositiveClause(Node<D,T>* root, vec<Lit>& conflict, std::map<Node<D,T>*,bool>& cache) {
+		if (cache[root] && root->conditional != lit_Undef && !sign(root->conditional)) {
+			// Simplest clause is to turn this node on.
+			conflict.push(root->conditional);
+			return;
+		}
+		vec<Lit> temp_A;
+		vec<Lit> temp_B;
+		switch (root->type) {
+			case Union:
+				learnPositiveClause(root->left,temp_A,cache);
+				learnPositiveClause(root->right,temp_B,cache);
+				appendSmallerVector(conflict, temp_A, temp_B);
+				break;
+			case Intersection:
+				learnPositiveClause(root->left,temp_A,cache);
+				learnPositiveClause(root->right,temp_B,cache);
+				appendVector(conflict, temp_A);
+				appendVector(conflict, temp_B);
+				break;
+			case Difference:
+				learnPositiveClause(root->left,temp_A,cache);
+				learnNegativeClause(root->right,temp_B,cache);
+				appendVector(conflict, temp_A);
+				appendVector(conflict, temp_B);
+				break;
+			default:
+				break;
+		}
+	}
+
+	// Learn clause that must be true for the point to be excluded
+	void learnNegativeClause(Node<D,T>* root, vec<Lit>& conflict, std::map<Node<D,T>*,bool>& cache) {
+		if (cache[root] && root->conditional != lit_Undef && sign(root->conditional)) {
+			// Simplest clause is to shut this node off.
+			conflict.push(~root->conditional);
+			return;
+		}
+		vec<Lit> temp_A;
+		vec<Lit> temp_B;
+		switch (root->type) {
+			case Union:
+				learnNegativeClause(root->left,temp_A,cache);
+				learnNegativeClause(root->right,temp_B,cache);
+				appendVector(conflict, temp_A);
+				appendVector(conflict, temp_B);
+				break;
+			case Intersection:
+				learnNegativeClause(root->left,temp_A,cache);
+				learnNegativeClause(root->right,temp_B,cache);
+				appendSmallerVector(conflict, temp_A, temp_B);
+				break;
+			case Difference:
+				learnNegativeClause(root->left,temp_A,cache);
+				learnPositiveClause(root->right,temp_B,cache);
+				appendSmallerVector(conflict, temp_A, temp_B);
+				break;
+			default:
+				break;
+		}
+	}
+
+	
+
 public:	
 
-	bool PointContainsDetector<D, T>::propagate(vec<Lit> & conflict) {
+	~PointContainmentDetector() {
+
+	}
+
+	PointContainmentDetector(Node<D,T>* underRoot, Node<D,T>* overRoot, CSG<D,T>* undercsg, CSG<D,T>* overcsg, Point<D,T>* point, Lit literal) {
+		this->under = underRoot;
+		this->over = overRoot;
+		this->under_csg = undercsg;
+		this->over_csg = overcsg;
+		this->p = point;
+		this->l = literal;
+	}
+
+	bool propagate(vec<Lit> & conflict) {
 		if (under_cache[under] && !sign(l)) {
-			// Build a clause that prevents the root of the under approx from containing the point
-			learnClause(under, true, conflict, under_cache);
+			// Build a clause that explains why the point is contained in the under approximation
+			learnPositiveClause(under, conflict, under_cache);
 			return false;
 		} else if (!over_cache[over] && sign(l)) {
-			// Build a clause that forces the root of the over approx to contain the point
-			learnClause(over, false, conflict, over_cache);
+			// Build a clause that explains why the point isn't contained in the over approximation
+			learnNegativeClause(over, conflict, over_cache);
 			return false;
 		}
 	return true;
 	}
 	
-	void buildReason(Lit p, vec<Lit> & reason, CRef marker)=0;
+	void buildReason(Lit p, vec<Lit> & reason, CRef marker){};
 	
 	bool checkSatisfied() {
 		return true;
@@ -284,47 +256,20 @@ public:
 	Lit decide() {
 		return lit_Undef;
 	}
-	
+
 	void addVar(Var v) {
-		unassigned_negatives++;
-		unassigned_positives++;
 	}
 	
 	void setOccurs(Lit l, bool occurs) {
-		if (!occurs) {
-			if (sign(l))
-				unassigned_negatives--;
-			else
-				unassigned_positives--;
-		} else {
-			if (sign(l))
-				unassigned_negatives++;
-			else
-				unassigned_positives++;
-		}
-		assert(unassigned_positives >= 0);
-		assert(unassigned_negatives >= 0);
 	}
 	
 	void assign(Lit l) {
 		Var v = var(l);
-		if (sign(l)) {
-			unassigned_negatives--;
-		} else {
-			unassigned_positives--;
-		}
 		update(v);
-		assert(unassigned_positives >= 0);
-		assert(unassigned_negatives >= 0);
 	}
 
 	void unassign(Lit l) {
 		Var v = var(l);
-		if (sign(l)) {
-			unassigned_negatives++;
-		} else {
-			unassigned_positives++;
-		}
 		update(v);
 	}
 };

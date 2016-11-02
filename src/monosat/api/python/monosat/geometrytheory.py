@@ -22,27 +22,6 @@ import sys
 from monosat.bvtheory import BitVector
 from monosat.logic import *
 from monosat.manager import Manager
-class GeometryManager(metaclass=Manager):
-
-    def  __init__(self):
-        self.points = []
-        self.shapes = []
-        self.planes = []   
-        self.csg = 0
-    
-    def clear(self):
-        self.points = []
-        self.planes = []
-        self.shapes = []   
-    
-    def addPoint(self, p):
-        self.points.append(p)
-    
-    def newPolygon(self,polygon):
-        self.polygons.append(polygon)
-    
-    def addCSG(self, csg):
-        self.csg = csg
     
 class CSG():
     class CSGType():
@@ -52,13 +31,12 @@ class CSG():
 
     def __init__(self,CSG_Type=1):
         self._monosat = monosat.monosat_c.Monosat()
-        manager = GeometryManager()
-        manager.addCSG(self)
         self.csg = self._monosat.initCSGTheory()
 
         self.points = []
         self.planes = []
-        self.shapes = []   
+        self.shapes = []
+        self.pointContains = []   
 
 
     def addPoint(self, x, y):  
@@ -88,6 +66,11 @@ class CSG():
 
     def addConditionalShape(self, A, B, typeIndex):  
         n = self._monosat.newConditionalShape(self.csg, A, B, typeIndex)    
+        self.shapes.append(n)        
+        return n
+
+    def addShapeContainsPoint(self, shape, point):  
+        n = self._monosat.addShapeContainsPoint(self.csg, A, B, typeIndex)    
         self.shapes.append(n)        
         return n
 

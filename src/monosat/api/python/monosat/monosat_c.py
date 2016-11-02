@@ -416,8 +416,8 @@ class Monosat(metaclass=Singleton):
         self.monosat_c.newConditionalShape.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int, c_int]
         self.monosat_c.newConditionalShape.restype=c_literal
 
-        self.monosat_c.shapeContainsPoint.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
-        self.monosat_c.shapeContainsPoint.restype=c_literal
+        self.monosat_c.newShapeContainsPoint.argtypes=[c_solver_p, c_csg_theory_p, c_int, c_int]
+        self.monosat_c.newShapeContainsPoint.restype=c_literal
 
 
         self.newSolver()
@@ -1062,9 +1062,9 @@ class Monosat(metaclass=Singleton):
         self.backtrack()
         return self.monosat_c.newConditionalShape(self.solver._ptr, csg, A, B, opType)
 
-    def shapeContainsPoint(self, csg, shape, point):
+    def newShapeContainsPoint(self, csg, shape, point):
         self.backtrack()
-        return self.monosat_c.shapeContainsPoint(self.solver._ptr, csg, shape, point)
+        return self.monosat_c.newShapeContainsPoint(self.solver._ptr, csg, shape, point)
 
     #Monosat graph interface
     

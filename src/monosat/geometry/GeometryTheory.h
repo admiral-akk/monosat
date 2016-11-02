@@ -29,6 +29,7 @@ class GeometryTheorySolver;
 #include "monosat/utils/System.h"
 #include "monosat/core/Solver.h"
 #include "GeometryDetector.h"
+#include "PointContainmentDetector.h"
 #include "CSG.h"
 #include <gmpxx.h>
 
@@ -58,7 +59,6 @@ template<unsigned int D = 2, class T = int>
  	CSG<D, T> over_csg;
  	std::vector<Point<D,T>*> points;
  	std::vector<Plane<D,T>*> planes;
- 	std::map<Var, int> varToShape;
 
  	struct Assignment {
  		bool isPoint :1;
@@ -192,7 +192,7 @@ public:
 		return -n-1;
 	}
 	
-	int addConditionalShape(int AIndex, int BIndex, int type, Var v) {
+	void addConditionalShape(int AIndex, int BIndex, int type, Var v) {
 		assert(-1 < type && type < 3);
 		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(v,true)));
 		over_csg.varToIndex[v] = over_csg.shapes.size() - 1;
@@ -203,6 +203,13 @@ public:
 		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
 		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
 		under_csg.varToIndex[v] = under_csg.shapes.size() - 1;
+	}
+	
+	void addShapeContainsPoint(int shape, int point, Var v) {
+		Node<D,T>* overShape = over_csg.getNode(shape);
+		Node<D,T>* underShape = under_csg.getNode(shape);
+		PointContainmentDetector<D,T>* det = new PointContainmentDetector<D,T>(underShape, overShape, &under_csg, &over_csg, points[point],  mkLit(v));
+		detectors.emplace_back(det);
 	}
 
 	void printStats(int detailLevel) {

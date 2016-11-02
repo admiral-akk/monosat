@@ -238,7 +238,7 @@ typedef int64_t Weight;
   int newShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
   int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
   int newConditionalShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
-  int shapeContainsPoint(SolverPtr S,CSGSolver_2D G, int shape, int point);
+  int newShapeContainsPoint(SolverPtr S,CSGSolver_2D G, int shape, int point);
 
   //model query
   //For a given literal (not variable!), returns 0 for true, 1 for false, 2 for unassigned.

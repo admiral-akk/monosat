@@ -67,6 +67,8 @@ public:
 		return lit_Undef;
 	}
 	//virtual vec<int> & getLitMap();
+	GeometryDetector() {
+	}
 	GeometryDetector(int _detectorID) :
 			detectorID(_detectorID) {
 	}
