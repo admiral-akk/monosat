@@ -291,6 +291,7 @@ else:
 # To use the CSG theory, you must first initialize it!
 csg = CSG()
 
+# Start by adding some points into the system. These will function both as your points, and the normal vectors on your planes.
 p1 = csg.addPoint(0,0)
 p2 = csg.addPoint(1,1)
 p3 = csg.addPoint(-1,1)
@@ -301,16 +302,7 @@ p7 = csg.addPoint(1,0)
 p8 = csg.addPoint(0,-1)
 p9 = csg.addPoint(-1,0)
 
-print("p1: " + str(p1))
-print("p2: " + str(p2))
-print("p3: " + str(p3))
-print("p4: " + str(p4))
-print("p5: " + str(p5))
-print("p6: " + str(p6))
-print("p7: " + str(p7))
-print("p8: " + str(p8))
-print("p9: " + str(p9))
-
+# To create a half-plane, you need to give a point on the plane, and a normal vector. Everything "above" the plane is contained in it.
 plane1 = csg.addPlane(p7,p9)
 plane2 = csg.addPlane(p6,p8)
 plane3 = csg.addPlane(p9,p7)
@@ -319,21 +311,25 @@ plane5 = csg.addPlane(p1,p2)
 plane6 = csg.addPlane(p1,p4)
 plane7 = csg.addPlane(p1,p3)
 
-print("plane1: " + str(plane1))
-print("plane2: " + str(plane2))
-print("plane3: " + str(plane3))
-print("plane4: " + str(plane4))
-print("plane5: " + str(plane5))
-print("plane6: " + str(plane6))
-print("plane7: " + str(plane7))
-
+# To construct a shape, you start by creating a list of half-planes that you'd like to intersect.
 shape1 = csg.addPrimative([plane1, plane2, plane5])
 shape2 = csg.addPrimative([plane3, plane4, plane6])
 shape3 = csg.addPrimative([plane1, plane2, plane3, plane4])
+
+# You can then combine these basic shapes using Union - 0, Intersection - 1, Difference - 2
 shape4 = csg.addShape(shape1,shape2,0)
+
+# There are 2 kinds of variables in the system, conditional shapes, and predicates.
+
+# Conditional shapes are empty (null) if the boolean is false, and are normal if the boolean is true.
 shape5 = csg.addConditionalPrimative([plane3, plane2, plane7])
 shape6 = csg.addConditionalShape(shape1,shape2,0)
+
+# Shapes can be composed of a mix of conditional and normal shapes
 shape7 = csg.addShape(shape4,shape6,2)
+
+# Predicates assert a relationship between shapes 
+contains1 = csg.addShapeContainsPoint(shape4,p1)
 
 print("shape1: " + str(shape1))
 print("shape2: " + str(shape2))

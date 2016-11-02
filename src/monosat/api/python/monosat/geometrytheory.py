@@ -70,7 +70,7 @@ class CSG():
         return n
 
     def addShapeContainsPoint(self, shape, point):  
-        n = self._monosat.addShapeContainsPoint(self.csg, A, B, typeIndex)    
+        n = self._monosat.newShapeContainsPoint(self.csg, shape, point)   
         self.shapes.append(n)        
         return n
 
