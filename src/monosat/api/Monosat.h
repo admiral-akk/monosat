@@ -232,10 +232,10 @@ typedef int64_t Weight;
   //theory interface for constructive solid geometry 
 
   CSGSolver_2D initCSGTheory(SolverPtr S);
-  int newPoint(SolverPtr S,CSGSolver_2D G, int x, int y);
-  int newPlane(SolverPtr S,CSGSolver_2D G, int pointIndex, int vectorIndex);
-  int newPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
-  int newShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
+  void newPoint(SolverPtr S,CSGSolver_2D G, int x, int y);
+  void newPlane(SolverPtr S,CSGSolver_2D G, int pointIndex, int vectorIndex);
+  void newPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
+  void newShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
   int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length);
   int newConditionalShape(SolverPtr S,CSGSolver_2D G, int A, int B, int type);
   int newShapeContainsPoint(SolverPtr S,CSGSolver_2D G, int shape, int point);

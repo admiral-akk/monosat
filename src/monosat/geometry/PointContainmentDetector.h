@@ -33,7 +33,7 @@ template<unsigned int D, class T>
 class PointContainmentDetector : public GeometryDetector {
 
 private: 
-	
+
 	Node<D,T>* under;
 	Node<D,T>* over;
 	
@@ -136,9 +136,9 @@ private:
 
 	// Learn clause that must be true for the point to be contained
 	void learnPositiveClause(Node<D,T>* root, vec<Lit>& conflict, std::map<Node<D,T>*,bool>& cache) {
-		if (cache[root] && root->conditional != lit_Undef && !sign(root->conditional)) {
+		if (cache[root] && root->l != lit_Undef && !sign(root->l)) {
 			// Simplest clause is to turn this node on.
-			conflict.push(root->conditional);
+			conflict.push(root->l);
 			return;
 		}
 		vec<Lit> temp_A;
@@ -168,9 +168,9 @@ private:
 
 	// Learn clause that must be true for the point to be excluded
 	void learnNegativeClause(Node<D,T>* root, vec<Lit>& conflict, std::map<Node<D,T>*,bool>& cache) {
-		if (cache[root] && root->conditional != lit_Undef && sign(root->conditional)) {
+		if (cache[root] && root->l != lit_Undef && sign(root->l)) {
 			// Simplest clause is to shut this node off.
-			conflict.push(~root->conditional);
+			conflict.push(~root->l);
 			return;
 		}
 		vec<Lit> temp_A;
@@ -250,7 +250,7 @@ public:
 	}
 	
 	void preprocess() {
-		return;
+		initialize();
 	}
 	
 	Lit decide() {
@@ -261,16 +261,7 @@ public:
 	}
 	
 	void setOccurs(Lit l, bool occurs) {
-	}
-	
-	void assign(Lit l) {
-		Var v = var(l);
-		update(v);
-	}
 
-	void unassign(Lit l) {
-		Var v = var(l);
-		update(v);
 	}
 };
 

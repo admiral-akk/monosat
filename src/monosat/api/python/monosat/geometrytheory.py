@@ -40,37 +40,36 @@ class CSG():
 
 
     def addPoint(self, x, y):  
-        n = self._monosat.newPoint(self.csg, x, y)        
+        self._monosat.newPoint(self.csg, x, y)        
         self.points.append([x,y])        
-        return n
+        return len(self.points) - 1
 
     def addPlane(self, point, vector):  
-        n = self._monosat.newPlane(self.csg, point, vector)    
+        self._monosat.newPlane(self.csg, point, vector)    
         self.planes.append([point, vector])        
-        return n
+        return len(self.planes) - 1
 
     def addPrimative(self, planeArr):  
-        n = self._monosat.newPrimative(self.csg, planeArr)    
-        self.shapes.append(n)        
-        return n
+        self._monosat.newPrimative(self.csg, planeArr)    
+        self.shapes.append(planeArr)          
+        return len(self.shapes) - 1
 
     def addConditionalPrimative(self, planeArr):  
-        n = self._monosat.newConditionalPrimative(self.csg, planeArr)    
-        self.shapes.append(n)        
-        return n
+        var = Var(self._monosat.newConditionalPrimative(self.csg, planeArr)) 
+        self.shapes.append(planeArr)          
+        return len(self.shapes) - 1
 
     def addShape(self, A, B, typeIndex):  
-        n = self._monosat.newShape(self.csg, A, B, typeIndex)    
-        self.shapes.append(n)        
-        return n
+        self._monosat.newShape(self.csg, A, B, typeIndex)    
+        self.shapes.append([-1, A, B, typeIndex])        
+        return len(self.shapes) - 1
 
     def addConditionalShape(self, A, B, typeIndex):  
-        n = self._monosat.newConditionalShape(self.csg, A, B, typeIndex)    
-        self.shapes.append(n)        
-        return n
+        var = Var(self._monosat.newConditionalShape(self.csg, A, B, typeIndex))
+        self.shapes.append([-1, A, B, typeIndex])        
+        return var
 
     def addShapeContainsPoint(self, shape, point):  
-        n = self._monosat.newShapeContainsPoint(self.csg, shape, point)   
-        self.shapes.append(n)        
-        return n
-
+        var = Var(self._monosat.newShapeContainsPoint(self.csg, shape, point))   
+        self.pointContains.append([shape, point])      
+        return var

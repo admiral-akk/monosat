@@ -326,7 +326,7 @@ shape5 = csg.addConditionalPrimative([plane3, plane2, plane7])
 shape6 = csg.addConditionalShape(shape1,shape2,0)
 
 # Shapes can be composed of a mix of conditional and normal shapes
-shape7 = csg.addShape(shape4,shape6,2)
+shape7 = csg.addShape(3,5,2)
 
 # Predicates assert a relationship between shapes 
 contains1 = csg.addShapeContainsPoint(shape4,p1)
@@ -338,3 +338,10 @@ print("shape4: " + str(shape4))
 print("shape5: " + str(shape5))
 print("shape6: " + str(shape6))
 print("shape7: " + str(shape7))
+print("contains1: " + str(contains1))
+
+result = Solve()
+
+print("contains1: " + str(contains1.value())) 
+print("shape5: " + str(shape5.value())) 
+print("shape6: " + str(shape6.value())) 

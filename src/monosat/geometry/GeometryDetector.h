@@ -45,21 +45,22 @@ public:
 	virtual bool checkSatisfied() {
 		return true;
 	}
-	virtual void backtrackUntil(int level) {
-		
-	}
 	virtual void printStats() {
 		
 	}
 	virtual void printSolution() {
 		
 	}
-	virtual void backtrackUntil(Lit p) {
+	virtual void undecideTheory(Lit l) {
 		
 	}
 	
 	virtual void preprocess() {
 		
+	}
+
+	virtual void enqueueTheory(Lit l) {
+
 	}
 
 	// Suggests an assignment to the solver
@@ -94,21 +95,6 @@ public:
 		}
 		assert(unassigned_positives >= 0);
 		assert(unassigned_negatives >= 0);
-	}
-	virtual void assign(Lit l) {
-		if (sign(l))
-			unassigned_negatives--;
-		else
-			unassigned_positives--;
-		assert(unassigned_positives >= 0);
-		assert(unassigned_negatives >= 0);
-		
-	}
-	virtual void unassign(Lit l) {
-		if (sign(l))
-			unassigned_negatives++;
-		else
-			unassigned_positives++;
 	}
 };
 

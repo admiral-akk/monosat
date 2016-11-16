@@ -18,8 +18,6 @@ template<unsigned int D, class T>
 
 
  private:
- 	// Map from boolean name to node.
- 	std::map<Var, Node<D,T>*> boolToNode;
  	/*
 	//
 	// Bounding Box
@@ -53,7 +51,6 @@ template<unsigned int D, class T>
 
  public:
  	std::vector<Node<D,T>*> shapes;
- 	std::map<Var, int> varToIndex;
 
  	CSG() {
  	}
@@ -62,16 +59,12 @@ template<unsigned int D, class T>
  	// Update Boolean
  	// 
  	Node<D,T>* getNode(int index) {
- 		if (index < 0) {
- 			return shapes[-index-1];
- 		} else {
- 			return shapes[varToIndex[index]];
- 		}
+ 		return shapes[index];
  	}
 
- 	void updateBoolean(Lit value) {
- 		//boolToNode[var(value)]->setConditional(value);
- 		//updateParentBoundingBox(boolToNode[var(value)]);
+ 	void updateBoolean(bool value, int shapeIndex) {
+ 		Lit l = shapes[shapeIndex]->l;
+ 		shapes[shapeIndex]->l = mkLit(var(l), value);
  	}
 };
 #endif /* CSG_H_ */
