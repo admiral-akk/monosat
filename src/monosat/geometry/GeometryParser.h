@@ -53,14 +53,6 @@ class GeometryParser: public Parser<B, Solver> {
 			return;
 		}
 		
-		
-		int d, name;
-		
-		d = parseInt(in); //num nodes
-		name = parseInt(in); //num edges (I'm ignoring this currently)
-		geometryTheories.growTo(name + 1);
-
-
 		if (match(in, "int")) {
 			// We'll do stuff here later.
 		} else if (match(in, "float")) {
@@ -71,6 +63,7 @@ class GeometryParser: public Parser<B, Solver> {
 			// We'll do stuff here later.
 		}
 
+		int d, name;
 		d = parseInt(in); // We'll use this later
 		name = parseInt(in);
 		geometryTheories.growTo(name + 1);
@@ -260,7 +253,7 @@ public:
 		skipWhitespace(in);
 		if (*in == EOF) {
 			return false;
-		} else if (match(in, "csg")) {
+		} else if (match(in, "geometry")) {
 			readCSG(in, S);
 		} else if (match(in, "point")) {
 			readPoint(in, S);
@@ -274,7 +267,7 @@ public:
 			readShape(in, S, 1);
 		} else if (match(in, "difference")) {
 			readShape(in, S, 2);
-		} else if (match(in, "pointContains")) {
+		} else if (match(in, "predicate_point_in_shape")) {
 			readPointContains(in, S);
 		} else {
 			return false;

@@ -314,7 +314,9 @@ template<unsigned int D, class T>
 struct PlanePolygon {
 	std::vector<Plane<D,T>*>* edges;
 	PlanePolygon(std::vector<Plane<D,T>*>* boundary) {
-		this->edges = boundary;
+		this->edges = new std::vector<Plane<D,T>*>();
+		for (auto plane : *boundary)
+			this->edges->emplace_back(plane);
 	}
 
 	bool contains(Point<D,T>* p) {

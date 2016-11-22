@@ -342,6 +342,4 @@ print("contains1: " + str(contains1))
 
 result = Solve()
 
-print("contains1: " + str(contains1.value())) 
 print("shape5: " + str(shape5.value())) 
-print("shape6: " + str(shape6.value())) 

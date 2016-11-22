@@ -1,0 +1,68 @@
+c this is a cnf with 4 Boolean variables and 1 clauses
+c
+p cnf 4 1
+c
+c some clauses in CNF format
+c
+4 0
+c
+c FORMATTING:
+c
+c geometry DATA_TYPE DIMENSION CSG_ID  
+c Notes: DATA_TYPE is one of 'int', 'rational', 'float'
+c
+c point CSG_ID X_0 X_1 ... X_(D-1) POINT_ID
+c
+c plane CSG_ID POINT_ID POINT_ID PLANE_ID
+c Notes: the first point_id is a point on the plane, the second is the normal vector of the plane.
+c
+c primative CSG_ID PLANE_COUNT PLANE_0 ... PLANE_(PLANE_COUNT-1) SHAPE_ID VAR_ID
+c Notes: A point is contained in this iff it's in the intersection of all of the half-planes
+c Notes: If VAR_ID is 0, this shape has no associated variable
+c
+c intersection CSG_ID SHAPE_ID SHAPE_ID SHAPE_ID VAR_ID
+c Notes: the first two shape_ids refer to the shapes in the intersection, the third is the name of this shape
+c Notes: A point is contained in this shape iff it's contained in the first and second shape
+c Notes: If VAR_ID is 0, this shape has no associated variable
+c
+c union CSG_ID SHAPE_ID SHAPE_ID SHAPE_ID VAR_ID
+c Notes: the first two shape_ids refer to the shapes in the union, the third is the name of this shape
+c Notes: A point is contained in this shape iff it's contained in either the first and second shape
+c Notes: If VAR_ID is 0, this shape has no associated variable
+c
+c difference CSG_ID SHAPE_ID SHAPE_ID SHAPE_ID VAR_ID
+c Notes: the first two shape_ids refer to the shapes in the difference, the third is the name of this shape
+c Notes: A point is contained in this shape iff it's contained in the first shape and not in the second shape
+c Notes: If VAR_ID is 0, this shape has no associated variable
+c
+c pointContains CSG_ID POINT_ID SHAPE_ID VAR_ID
+c Notes: This is true iff the point is contained in the shape
+c Notes: VAR_ID better be valid.
+c
+geometry 2 0
+c
+point 0 0 1 0
+point 0 1 0 1
+point 0 0 -1 2
+point 0 -1 0 3
+point 0 0 0 4
+point 0 1 1 5
+point 0 1 -1 6
+point 0 -1 -1 7
+point 0 -1 1 8
+c 
+plane 0 2 0 0
+plane 0 3 1 1
+plane 0 0 2 2
+plane 0 1 3 3
+plane 0 4 5 4
+plane 0 4 7 5
+c 
+primative 0 4 0 1 2 3 4 0 0
+primative 0 3 4 1 3 1 0
+primative 0 3 0 2 5 2 0
+c 
+intersection 0 1 2 3 1
+union 0 1 2 4 2
+difference 0 0 4 5 3
+predicate_point_in_shape 0 3 5 4

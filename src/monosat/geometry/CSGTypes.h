@@ -17,6 +17,7 @@ template<unsigned int D, class T>
 
  		Node(PlanePolygon<D,T>* planePolygon) {
  			this->type = Primative;
+ 			this->p = planePolygon;
  			this->l = lit_Undef;
  			this->left = NULL;
  			this->right = NULL;
