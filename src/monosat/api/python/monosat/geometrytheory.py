@@ -57,7 +57,7 @@ class CSG():
     def addConditionalPrimative(self, planeArr):  
         var = Var(self._monosat.newConditionalPrimative(self.csg, planeArr)) 
         self.shapes.append(planeArr)          
-        return len(self.shapes) - 1
+        return var
 
     def addShape(self, A, B, typeIndex):  
         self._monosat.newShape(self.csg, A, B, typeIndex)    

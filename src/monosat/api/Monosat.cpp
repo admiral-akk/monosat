@@ -1470,8 +1470,11 @@ Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
 }
 
   void newPoint(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int x, int y) {
-  	std::vector<int> v = {x, y};
-  	G->addPoint(v);
+  	vec<int> v;
+  	v.growTo(2);
+  	v[0] = x;
+  	v[1] = y;
+  	G->addPoint(&v);
   }
 
 
@@ -1480,9 +1483,12 @@ Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
   }
 
   void newPrimative(SolverPtr S,Monosat::GeometryTheorySolver<2,int>* G, int* planes, int length) {
-  	std::vector<int>* planeIndexVector = new std::vector<int>(planes, planes+length);
-  	G->addPrimative(planeIndexVector);
-  	delete planeIndexVector;
+  	vec<int> v;
+  	v.growTo(length);
+  	for (int i = 0; i < length; i++) {
+  		v[i] = planes[i];
+  	}
+  	G->addPrimative(&v);
   }
 
   void newShape(Monosat::SimpSolver * S,Monosat::GeometryTheorySolver<2,int>* G, int A, int B, int type) {
@@ -1492,9 +1498,12 @@ Monosat::GeometryTheorySolver<2,int> * initCSGTheory(Monosat::SimpSolver * S){
   int newConditionalPrimative(SolverPtr S,CSGSolver_2D G, int* planes, int length) {
 	Var v = newVar(S);
 	Lit l = mkLit(v);
-  	std::vector<int>* planeIndexVector = new std::vector<int>(planes, planes+length);
-  	G->addConditionalPrimative(planeIndexVector, v);
-  	delete planeIndexVector;
+  	vec<int> planeIndexVector;
+  	planeIndexVector.growTo(length);
+  	for (int i = 0; i < length; i++) {
+  		planeIndexVector[i] = planes[i];
+  	}
+  	G->addConditionalPrimative(&planeIndexVector, v);
 	return toInt(l);
   }
 

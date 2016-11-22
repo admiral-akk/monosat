@@ -33,216 +33,219 @@
 #include "monosat/core/Config.h"
 #include "monosat/mtl/Vec.h"
 #include <vector>
+#include <map>
 
 namespace Monosat {
 
 // GEOMETRY Parser:
-template<class B, class Solver, class T = double>
+template<class B, class Solver>
 class GeometryParser: public Parser<B, Solver> {
 	using Parser<B, Solver>::mapVar;
-	//vec<GeometryTheorySolver<1,mpq_class>*> space_1D;
-	GeometryTheorySolver<2, T> *space_2D = nullptr;
-	//vec<GeometryTheorySolver<3,double>*> space_3D;
-	vec<char> tmp_str;
-	struct ParsePoint {
-		Var var;
-		vec<T> position;
-	};
+	vec<GeometryTheorySolver<2, int>*> geometryTheories;
+	// These exist to translate from the global name space to the theory's local name space
+	vec<map<int,int>> pointNameMap;
+	vec<map<int,int>> planeNameMap;
+	vec<map<int,int>> shapeNameMap;
 
-	vec<vec<ParsePoint>> pointsets;
-
-	struct ConvexHullArea {
-		int pointsetID;
-		T area;
-		Var v;
-	};
-
-	vec<ConvexHullArea> convex_hull_areas;
-
-	/*
-	 struct ConvexHullPointContained{
-	 int pointsetID;
-	 ParsePoint point;
-
-	 };
-
-	 vec<ConvexHullPointContained> convex_hull_point_containments;
-	 */
-
-	/*	struct ConvexHullLineIntersection{
-	 int pointsetID;
-	 Var var;
-	 ParsePoint p;
-	 ParsePoint q;
-	 };
-
-	 vec<ConvexHullLineIntersection> convex_hull_line_intersections;*/
-
-	struct ConvexHullPolygonIntersection {
-		int pointsetID;
-		bool inclusive;
-		Var var;
-		vec<ParsePoint> points;
-	};
-
-	vec<ConvexHullPolygonIntersection> convex_hull_polygon_intersections;
-
-	struct ConvexHullPoint {
-		int pointsetID;
-		Var pointVar;
-		Var pointOnHull;
-	};
-	vec<ConvexHullPoint> convex_hull_points;
-
-	struct ConvexHullsIntersection {
-		int pointsetID1;
-		int pointsetID2;
-		Var var;
-		bool inclusive;
-	};
-	vec<ConvexHullsIntersection> convex_hulls_intersect;
-
-	void parsePoint(B &in, int d, ParsePoint & point) {
-		//for now, points are given as 32-bit integers. This is less convenient than, say, floats, but makes parsing much easier.
-		//in the future, we could also support inputting arbitrary precision integers... but for now, we aren't going to.
-		
-		//is there a better way to read in an arbitrary-sized vector of points?
-		for (int i = 0; i < d; i++) {
-			
-			int n = parseInt(in);
-			//double p = parseDouble(in,tmp_str);
-			point.position.push((T) n);
+	void readCSG(B& in, Solver& S) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
 		}
+		
+		
+		int d, name;
+		
+		d = parseInt(in); //num nodes
+		name = parseInt(in); //num edges (I'm ignoring this currently)
+		geometryTheories.growTo(name + 1);
+
+
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+
+		d = parseInt(in); // We'll use this later
+		name = parseInt(in);
+		geometryTheories.growTo(name + 1);
+		shapeNameMap.growTo(name + 1);
+		planeNameMap.growTo(name + 1);
+		pointNameMap.growTo(name + 1);
+
+		GeometryTheorySolver<2, int> *geo = new GeometryTheorySolver<2, int>(&S);
+
+		geometryTheories[name] = geo;
+		S.addTheory(geo);
 	}
-	
+
 	void readPoint(B& in, Solver& S) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
+		}
 		
-		int pointsetID = parseInt(in);
 		
-		Var v = parseInt(in)-1;
-		v = mapVar(S,v);
-		int d = parseInt(in);
-		pointsets.growTo(pointsetID + 1);
-		pointsets[pointsetID].push();
-		//stringstream ss(in);
-		ParsePoint & point = pointsets[pointsetID].last();
-		parsePoint(in, d, point);
+		int csgName, dim, name;
 		
-		point.var = v;
+		csgName = parseInt(in); 
 
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+		vec<int> point;
+		dim = 2;
+		point.growTo(dim);
+
+		for (int i = 0; i < dim; i++) {
+			point[i] = parseInt(in);
+		}
+		name = parseInt(in); 
+
+		pointNameMap[csgName][name] = geometryTheories[csgName]->addPoint(&point);
 	}
-	
-	void readConvexHullArea(B& in, Solver& S) {
+
+	void readPlane(B& in, Solver& S) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
+		}
 		
-		//hull_area_lt pointsetID area var
-		int pointset = parseInt(in); //ID of the hull
-		Var var = parseInt(in) - 1;
-		var = mapVar(S,var);
-		stringstream ss(in);
-		T area;
-		ss >> area;
-		//T area =  parseDouble(in,tmp_str);
-		convex_hull_areas.push( { pointset, area, var });
+		int csgName, point, normalVector, name;
+		
+		csgName = parseInt(in); 
+
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+
+		point = parseInt(in); 
+		normalVector = parseInt(in); 
+		name = parseInt(in); 
+
+		int localPointName = pointNameMap[csgName][point];
+		int localVectorName = pointNameMap[csgName][normalVector];
+
+		planeNameMap[csgName][name] = geometryTheories[csgName]->addPlane(localPointName, localVectorName);
 	}
-	void readConvexHullIntersectsPolygon(B& in, Solver& S, bool inclusive) {
-		//convex_hull_intersects_polygon pointsetID var NumPoints D p1 p2 ... pD q1 q2 ... qD ...
+
+	void readPrimative(B& in, Solver& S) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
+		}
 		
-		convex_hull_polygon_intersections.push();
-		convex_hull_polygon_intersections.last().inclusive = inclusive;
+		int csgName, plane, name, varName;
 		
-		int pointsetID = parseInt(in);
-		Var v = parseInt(in) - 1;
-		v = mapVar(S,v);
-		convex_hull_polygon_intersections.last().pointsetID = pointsetID;
-		convex_hull_polygon_intersections.last().var = v;
-		int numPoints = parseInt(in);
-		
-		int d = parseInt(in);
-		for (int i = 0; i < numPoints; i++) {
-			convex_hull_polygon_intersections.last().points.push();
-			ParsePoint & p = convex_hull_polygon_intersections.last().points.last();
-			parsePoint(in, d, p);
+		csgName = parseInt(in); 
+
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+
+		vec<int> localPrimative;
+		int size = parseInt(in); 
+		localPrimative.growTo(size);
+		for (int i = 0; i < size; i++) {
+			plane = parseInt(in);
+			localPrimative[i] = planeNameMap[csgName][plane];
+		}
+
+		name = parseInt(in); 
+		varName = parseInt(in) - 1; 
+
+		if (varName == -1) {
+			shapeNameMap[csgName][name] = geometryTheories[csgName]->addPrimative(&localPrimative);
+		} else {
+			varName = mapVar(S,varName);
+			shapeNameMap[csgName][name] = geometryTheories[csgName]->addConditionalPrimative(&localPrimative, varName);
 		}
 	}
-	/*void readConvexHullIntersectsLine(B& in, Solver& S){
-	 //convex_hull_intersects_line pointsetID var D p1 p2 ... qD q1 q2 ... qD
 
-	 convex_hull_line_intersections.push();
-	 ParsePoint & p = convex_hull_line_intersections.last().p;
-	 ParsePoint & q = convex_hull_line_intersections.last().q;
-	 int pointsetID = parseInt(in);
-	 int v = parseInt(in)-1;
-	 convex_hull_line_intersections.last().pointsetID = pointsetID;
-	 convex_hull_line_intersections.last().var = v;
-	 int d = parseInt(in);
-	 parsePoint(in,d,p);
-	 parsePoint(in,d,q);
-
-	 //stringstream ss(in);
-	 for(int i = 0;i<d;i++){
-	 //skipWhitespace(in);
-	 long n = parseInt(in);
-	 //double p = parseDouble(in,tmp_str);
-	 point.position.push((T)n);
-	 }
-	 for(int i = 0;i<d;i++){
-
-	 ss>>p;
-	 point.position.push(p);
-	 }
-
-
-
-	 }*/
-	/*
-	 void readConvexHullPointContained(B& in, Solver& S) {
-
-	 //hull_point_contained pointsetID var D p1 p2 ... pD
-
-	 convex_hull_point_containments.push();
-	 ParsePoint & point = convex_hull_point_containments.last().point;
-	 int pointsetID = parseInt(in);
-	 int v = parseInt(in)-1;
-	 int d = parseInt(in);
-	 parsePoint(in,d,point);
-
-	 //stringstream ss(in);
-	 for(int i = 0;i<d;i++){
-	 //skipWhitespace(in);
-	 long n = parseInt(in);
-	 //double p = parseDouble(in,tmp_str);
-	 point.position.push((T)n);
-	 }
-	 for(int i = 0;i<d;i++){
-
-	 ss>>p;
-	 point.position.push(p);
-	 }
-
-	 point.var = v;
-	 convex_hull_point_containments.last().pointsetID = pointsetID;
-	 }*/
-	void readConvexHullPointOnHull(B& in, Solver& S) {
+	void readShape(B& in, Solver& S, int type) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
+		}
 		
-		//point_on_hull pointsetID pointVar var
+		int csgName, left, right, name, varName;
 		
-		int pointsetID = parseInt(in);
-		int pointVar = parseInt(in) - 1;
-		Var var = parseInt(in) - 1;
-		var = mapVar(S,var);
-		convex_hull_points.push( { pointsetID, pointVar, var });
+		csgName = parseInt(in); 
+
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+
+		left = parseInt(in); 
+		left = shapeNameMap[csgName][left];
+		right = parseInt(in); 
+		right = shapeNameMap[csgName][right];
+		name = parseInt(in); 
+		varName = parseInt(in); 
+		if (varName == -1) {
+			shapeNameMap[csgName][name] = geometryTheories[csgName]->addShape(left, right, type);
+		} else {
+			varName = mapVar(S,varName);
+			shapeNameMap[csgName][name] = geometryTheories[csgName]->addConditionalShape(left, right, type, varName);
+		}
 	}
-	
-	void readConvexHullsIntersect(B& in, Solver& S, bool inclusive) {
+
+	void readPointContains(B& in, Solver& S) {
+		if (opt_ignore_theories) {
+			skipLine(in);
+			return;
+		}
 		
-		//hulls_intersect pointsetID1 pointsetID2 var
-		//v is true iff the two convex hulls intersect
-		int pointsetID1 = parseInt(in);
-		int pointsetID2 = parseInt(in);
-		Var v = parseInt(in) - 1;
-		v = mapVar(S,v);
-		convex_hulls_intersect.push( { pointsetID1, pointsetID2, v, inclusive });
+		int csgName, point, shape, varName;
 		
+		csgName = parseInt(in); 
+
+		if (match(in, "int")) {
+			// We'll do stuff here later.
+		} else if (match(in, "float")) {
+			// We'll do stuff here later.
+		} else if (match(in, "rational")) {
+			// We'll do stuff here later.
+		} else {
+			// We'll do stuff here later.
+		}
+
+		point = parseInt(in); 
+		point = pointNameMap[csgName][point];
+		shape = parseInt(in); 
+		shape = shapeNameMap[csgName][shape];
+		varName = parseInt(in); 
+		varName = mapVar(S,varName);
+		geometryTheories[csgName]->addShapeContainsPoint(shape, point, varName);
 	}
 	
 public:
@@ -257,28 +260,22 @@ public:
 		skipWhitespace(in);
 		if (*in == EOF) {
 			return false;
-		} else if (match(in, "convex_hull_area_gt")) {
-			readConvexHullArea(in, S);
-		} else if (match(in, "convex_hull_collides_polygon")) {
-			readConvexHullIntersectsPolygon(in, S, true);
-		} else if (match(in, "convex_hull_intersects_polygon")) {
-			readConvexHullIntersectsPolygon(in, S, false);
-		} else if (match(in, "point_on_convex_hull")) {
-			readConvexHullPointOnHull(in, S);
-		} else if (match(in, "convex_hulls_intersect")) {
-			readConvexHullsIntersect(in, S, false);
-		} else if (match(in, "convex_hulls_collide")) {
-			readConvexHullsIntersect(in, S, true);
-		} else if (match(in, "heightmap_volume")) {
-			
-		} else if (match(in, "euclidian_steiner_tree_weight")) {
-			
-		} else if (match(in, "rectilinear_steiner_tree_weight")) {
-			
+		} else if (match(in, "csg")) {
+			readCSG(in, S);
 		} else if (match(in, "point")) {
-			//add a point to a point set
 			readPoint(in, S);
-			
+		} else if (match(in, "plane")) {
+			readPlane(in, S);
+		} else if (match(in, "primative")) {
+			readPrimative(in, S);
+		} else if (match(in, "union")) {
+			readShape(in, S, 0);
+		} else if (match(in, "intersection")) {
+			readShape(in, S, 1);
+		} else if (match(in, "difference")) {
+			readShape(in, S, 2);
+		} else if (match(in, "pointContains")) {
+			readPointContains(in, S);
 		} else {
 			return false;
 		}
@@ -286,214 +283,7 @@ public:
 	}
 	
 	void implementConstraints(Solver & S) {
-		//build point sets in their appropriate spaces.
-		//for now, we only support up to 3 dimensions
-		vec<int> pointsetDim;
-		for (int i = 0; i < pointsets.size(); i++) {
-			vec<ParsePoint> & pointset = pointsets[i];
-			if (pointset.size() == 0)
-				continue;
-			ParsePoint & firstP = pointset[0];
-			int D = firstP.position.size();
-			
-			if (D == 1) {
-				/* space_1D.growTo(i+1,nullptr);
-				 if(!space_1D[i]){
-				 space_1D[i] = new GeometryTheorySolver<1,double>(&S);
-				 S.addTheory(space_1D[i]);
-				 }*/
-			} else if (D == 2) {
-				
-				if (!space_2D) {
-					space_2D = new GeometryTheorySolver<2, T>(&S);
-					S.addTheory(space_2D);
-				}
-			}/*else if (D==3){
-			 space_3D.growTo(i+1,nullptr);
-			 if(!space_3D[i]){
-			 space_3D[i] = new GeometryTheorySolver<3,double>(&S);
-			 S.addTheory(space_3D[i]);
-			 }
-			 }*/else {
-				
-				parse_errorf("Only points of dimension 1 and 2 currently supported (found point %d of dimension %d), aborting\n",
-						i, D);
-
-			}
-			
-			pointsetDim.growTo(i + 1, -1);
-			pointsetDim[i] = D;
-			for (ParsePoint & p : pointset) {
-				if (p.position.size() != D) {
-					parse_errorf("All points in a pointset must have the same dimensionality\n");
-
-				}
-				if (D == 1) {
-					/* Point<1,double> pnt(p.position);
-					 space_1D[i]->newPoint(pnt,p.var);*/
-				} else if (D == 2) {
-					Point<2, T> pnt(p.position);
-					//space_2D->newPoint(i, pnt, p.var);
-				}/*else if(D==3){
-				 Point<3,double> pnt(p.position);
-				 space_3D[i]->newPoint(pnt,p.var);
-				 }*/else {
-					assert(false);
-				}
-			}
-		}/*
-		for (auto & c : convex_hull_areas) {
-			if (c.pointsetID >= pointsetDim.size() || c.pointsetID < 0 || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf("Bad pointsetID %d\n", c.pointsetID);
-			}
-			if (c.pointsetID < 0 || c.pointsetID >= pointsetDim.size() || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf( "Pointset %d is undefined, aborting!", c.pointsetID);
-
-			}
-			int D = pointsetDim[c.pointsetID];
-			
-			if (D == 1) {
-				// space_1D[c.pointsetID]->convexHullArea(c.area,c.v);
-			} else if (D == 2) {
-				space_2D->convexHullArea(c.pointsetID, c.area, c.v);
-			}else if(D==3){
-			 space_3D[c.pointsetID]->convexHullArea(c.area,c.v);
-			 }else {
-				assert(false);
-			}
-			
-		}
-		for (auto & c : convex_hull_polygon_intersections) {
-			if (c.pointsetID >= pointsetDim.size() || c.pointsetID < 0 || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf( "Bad pointsetID %d\n", c.pointsetID);
-			}
-			if (c.pointsetID < 0 || c.pointsetID >= pointsetDim.size() || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf( "Pointset %d is undefined, aborting!", c.pointsetID);
-
-			}
-			int D = pointsetDim[c.pointsetID];
-			
-			if (D == 1) {
-				
-				// space_1D[c.pointsetID]->convexHullContains(pnt, c.point.var);
-			} else if (D == 2) {
-				
-				std::vector<Point<2, T> > p2;
-				for (ParsePoint &p : c.points) {
-					p2.push_back(p.position);
-				}
-				space_2D->convexHullIntersectsPolygon(c.pointsetID, p2, c.var, c.inclusive);
-			} else if (D == 3) {
-				
-			} else {
-				assert(false);
-			}
-		}*/
-		/*	 for (auto & c: convex_hull_point_containments){
-		 if(c.pointsetID>=pointsetDim.size() || c.pointsetID<0 || pointsetDim[c.pointsetID]<0){
-		 parse_errorf("Bad pointsetID %d\n", c.pointsetID);
-		 }
-		 int D = pointsetDim[c.pointsetID];
-
-		 if(D==1){
-		 Point<1,T> pnt(c.point.position);
-		 // space_1D[c.pointsetID]->convexHullContains(pnt, c.point.var);
-		 }else if(D==2){
-		 Point<2,T> pnt(c.point.position);
-		 space_2D->convexHullContains(c.pointsetID,pnt, c.point.var);
-		 }else if(D==3){
-		 Point<3,double> pnt(c.point.position);
-		 space_3D[c.pointsetID]->convexHullContains(pnt, c.point.var);
-		 }else{
-		 assert(false);
-		 }
-		 }*/
-
-		/*	 for (auto & c:convex_hull_line_intersections){
-		 if(c.pointsetID>=pointsetDim.size() || c.pointsetID<0 || pointsetDim[c.pointsetID]<0){
-		 parse_errorf("Bad pointsetID %d\n", c.pointsetID);
-		 }
-		 int D = pointsetDim[c.pointsetID];
-
-		 if(D==1){
-		 // Point<1,T> pnt(c.point.position);
-		 // space_1D[c.pointsetID]->convexHullContains(pnt, c.point.var);
-		 }else if(D==2){
-		 Point<2,T> p(c.p.position);
-		 Point<2,T> q(c.q.position);
-		 space_2D->convexHullIntersectsLine(c.pointsetID,p,q,c.var);
-		 }else if(D==3){
-		 Point<3,double> pnt(c.point.position);
-		 space_3D[c.pointsetID]->convexHullContains(pnt, c.point.var);
-		 }else{
-		 assert(false);
-		 }
-		 }*/
-		 /*
-		for (auto & c : convex_hull_points) {
-			if (c.pointsetID >= pointsetDim.size() || c.pointsetID < 0 || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf( "Bad pointsetID %d\n", c.pointsetID);
-			}
-			if (c.pointsetID < 0 || c.pointsetID >= pointsetDim.size() || pointsetDim[c.pointsetID] < 0) {
-				parse_errorf( "Pointset %d is undefined, aborting!", c.pointsetID);
-
-			}
-			parse_errorf("point_on_convex_hull not currently supported, aborting.\n");
-
-			/* int D = pointsetDim[c.pointsetID];
-
-			 if(D==1){
-			 //space_1D[c.pointsetID]->convexHullContains(c.pointVar,c.pointOnHull);
-			 }else if(D==2){
-			 if(!S.hasTheory(c.pointVar)){
-			 parse_errorf("Variable %d is not a point variable, aborting!",c.pointVar);
-
-			 }
-			 Var theoryVar = S.getTheoryVar(c.pointVar);
-			 int pointID = space_2D->getPointID(theoryVar);
-			 int pointset = space_2D->getPointset(pointID);
-			 assert(pointset == c.pointsetID);
-			 int pointIndex = space_2D->getPointsetIndex(pointID);
-
-			 assert(pointIndex>=0);
-			 space_2D->pointOnHull(c.pointsetID,pointIndex,c.pointOnHull);
-			 }else if(D==3){
-			 space_3D[c.pointsetID]->convexHullContains(c.pointVar,c.pointOnHull);
-			 }else{
-			 assert(false);
-			 }
-
-		}*/
-		/*
-		for (auto & c : convex_hulls_intersect) {
-			if (c.pointsetID1 < 0 || c.pointsetID1 >= pointsetDim.size() || c.pointsetID1 < 0
-					|| pointsetDim[c.pointsetID1] < 0) {
-				parse_errorf( "Bad pointsetID %d\n", c.pointsetID1);
-
-			}
-			if (c.pointsetID2 < 0 || c.pointsetID2 >= pointsetDim.size() || c.pointsetID2 < 0
-					|| pointsetDim[c.pointsetID2] < 0) {
-				parse_errorf( "Bad pointsetID %d\n", c.pointsetID2);
-
-			}
-			int D = pointsetDim[c.pointsetID1];
-			
-			if (pointsetDim[c.pointsetID2] != D) {
-				parse_errorf(
-						"Cannot intersect convex hulls in different dimensions (%d has dimension %d, while %d has dimension %d)\n",
-						c.pointsetID1, D, c.pointsetID2, pointsetDim[c.pointsetID2]);
-			}
-			if (D == 1) {
-				
-			} else if (D == 2) {
-				
-				space_2D->convexHullsIntersect(c.pointsetID1, c.pointsetID2, c.var, c.inclusive);
-			} else {
-				assert(false);
-			}
-			
-		}*/
-		
+		return;
 	}
 	
 };

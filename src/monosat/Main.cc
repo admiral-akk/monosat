@@ -605,13 +605,8 @@ int main(int argc, char** argv) {
 
 		AMOParser<char *, SimpSolver> amo;
 		parser.addParser(&amo);
-        GeometryParser<char *, SimpSolver, mpq_class>  preciseGeometryParser;
-        GeometryParser<char *, SimpSolver, double> doubleGeometryParser;
-		if (precise) {
-			parser.addParser(&preciseGeometryParser);
-		} else {
-			parser.addParser(&doubleGeometryParser);
-		}
+        GeometryParser<char *, SimpSolver>  geometryParser;
+		parser.addParser(&geometryParser);
 
 
 

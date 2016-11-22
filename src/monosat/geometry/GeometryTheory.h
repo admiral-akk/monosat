@@ -254,6 +254,7 @@ public:
 	}
 
 	Var newVar(Var solverVar, int detector, bool isPredicate = false, bool connectToTheory = true) {
+		std::cout << "Solver var: " << solverVar << std::endl;
 		while (S->nVars() <= solverVar)
 			S->newVar();
 
@@ -273,22 +274,23 @@ public:
 			S->setTheoryVar(solverVar, getTheoryIndex(), v);
 			assert(toSolver(v) == solverVar);
 		}
-
 		return v;
 	}
 
-	void addPoint(std::vector<T> v) {
-		assert(D == v.size());
-		Point<D,T>* p = new Point<D,T>(v);
+	int addPoint(vec<T>* v) {
+		assert(D == v->size());
+		Point<D,T>* p = new Point<D,T>(*v);
 		points.emplace_back(p);
+		return points.size() - 1;
 	}
 
-	void addPlane(int pointIndex, int vectorIndex) {
+	int addPlane(int pointIndex, int vectorIndex) {
 		Plane<D,T>* p = new Plane<D,T>(points[pointIndex], points[vectorIndex]);
 		planes.emplace_back(p);
+		return planes.size() - 1;
 	}
 
-	void addPrimative(std::vector<int>* planeIndexVector) {
+	int addPrimative(vec<int>* planeIndexVector) {
 		std::vector<Plane<D,T>*>* boundary = new std::vector<Plane<D,T>*>();
 		for (auto index : *planeIndexVector) {
 			boundary->emplace_back(planes[index]);
@@ -296,9 +298,11 @@ public:
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
 		over_csg.shapes.emplace_back(new Node<D,T>(p));
 		under_csg.shapes.emplace_back(new Node<D,T>(p));
+		return under_csg.shapes.size() - 1;
 	}
 
-	void addConditionalPrimative(std::vector<int>* planeIndexVector, Var outerVar = var_Undef) {
+	int addConditionalPrimative(vec<int>* planeIndexVector, Var outerVar = var_Undef) {
+		std::cout << "Solver var: " << outerVar << std::endl;
 		Var v = newVar(outerVar, over_csg.shapes.size(), false, true);
 		std::vector<Plane<D,T>*>* boundary = new std::vector<Plane<D,T>*>();
 		for (auto index : *planeIndexVector) {
@@ -307,9 +311,10 @@ public:
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
 		over_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(outerVar,true)));
 		under_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(outerVar,false)));
+		return under_csg.shapes.size() - 1;
 	}
 	
-	void addShape(int AIndex, int BIndex, int type) {
+	int addShape(int AIndex, int BIndex, int type) {
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
 		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),over_csg.getNode(BIndex),type));
@@ -318,9 +323,10 @@ public:
 		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
 		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
 		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
+		return under_csg.shapes.size() - 1;
 	}
 	
-	void addConditionalShape(int AIndex, int BIndex, int type, Var outerVar = var_Undef) {
+	int addConditionalShape(int AIndex, int BIndex, int type, Var outerVar = var_Undef) {
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
 		Var v = newVar(outerVar, n, false, true);
@@ -330,6 +336,7 @@ public:
 		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(outerVar,false)));
 		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
 		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
+		return under_csg.shapes.size() - 1;
 	}
 	
 	void addShapeContainsPoint(int shape, int point, Var outerVar = var_Undef) {
