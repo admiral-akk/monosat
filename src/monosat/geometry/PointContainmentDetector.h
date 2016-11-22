@@ -215,18 +215,36 @@ public:
 	}
 
 	bool propagate(vec<Lit> & conflict) {
+		if (l == lit_Undef)
+			return true;
 		if (under_cache[under] && !sign(l)) {
 			// Build a clause that explains why the point is contained in the under approximation
 			learnPositiveClause(under, conflict, under_cache);
+			conflict.push(~l);
 			return false;
 		} else if (!over_cache[over] && sign(l)) {
 			// Build a clause that explains why the point isn't contained in the over approximation
 			learnNegativeClause(over, conflict, over_cache);
+			conflict.push(~l);
 			return false;
 		}
 	return true;
 	}
+
+	void enqueueTheory(Lit new_l, bool owner) {
+		if (!owner)
+			update(var(new_l));
+		else
+			l = new_l;
+	}
 	
+	void undecideTheory(Lit new_l, bool owner) {
+		if (!owner)
+			update(var(new_l));
+		else
+			l = lit_Undef;
+	}
+
 	void buildReason(Lit p, vec<Lit> & reason, CRef marker){};
 	
 	bool checkSatisfied() {

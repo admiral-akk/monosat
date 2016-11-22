@@ -82,6 +82,11 @@ template<unsigned int D = 2, class T = int>
 	int decisionLevel;
 
 	int theory_index=0;
+
+	void printAssignments() {
+		for (int i = 0; i < assigns.size(); i++)
+			std::cout << i << ": " << (assigns[i] == l_True) << "\n";
+	}
 public:
 
 	GeometryTheorySolver(Solver * S_, int _id = -1) :
@@ -143,7 +148,7 @@ public:
 	}
 	void undecideTheory(Lit l){
 			if (vars[var(l)].isPredicate) {
-				detectors[vars[var(l)].index]->undecideTheory(l);
+				detectors[vars[var(l)].index]->undecideTheory(l, true);
 			} else {
 				if (sign(l)) 
 					under_csg.updateBoolean(false, vars[var(l)].index);
@@ -151,7 +156,7 @@ public:
 					over_csg.updateBoolean(true, vars[var(l)].index);
 				
 				for (auto * d : detectors) {
-					d->undecideTheory(l);
+					d->undecideTheory(l, false);
 				}
 			}
 			assigns[var(l)] = l_Undef;
@@ -159,10 +164,10 @@ public:
 
 	void backtrackAssign(Var v){
 			if (vars[v].isPredicate) {
-				detectors[vars[v].index]->undecideTheory(mkLit(v,assigns[v]==l_True));
+				detectors[vars[v].index]->undecideTheory(mkLit(v,assigns[v]==l_True), true);
 			} else {
 				for (auto * d : detectors) {
-					d->undecideTheory(mkLit(v,assigns[v] == l_True));
+					d->undecideTheory(mkLit(v,assigns[v] == l_True), false);
 				}
 			}
 		}
@@ -183,7 +188,7 @@ public:
 	void enqueueTheory(Lit l) {
 		assigns[var(l)] = sign(l) ? l_False : l_True;
 		if (vars[var(l)].isPredicate) {
-			detectors[vars[var(l)].index]->enqueueTheory(l);
+			detectors[vars[var(l)].index]->enqueueTheory(l, true);
 		} else {
 				if (sign(l)) 
 					under_csg.updateBoolean(true, vars[var(l)].index);
@@ -191,20 +196,24 @@ public:
 					over_csg.updateBoolean(false, vars[var(l)].index);
 
 			for (auto * d : detectors) {
-				d->enqueueTheory(l);
+				d->enqueueTheory(l, false);
 			}
 		}
 	}
 	bool propagateTheory(vec<Lit> & conflict) {
 		for (auto * d : detectors) {
 			if (!d->propagate(conflict)) {
+				toSolver(conflict);
 				return false;
 			}
 		}
+
 		return true;
 	}
 	bool solveTheory(vec<Lit> & conflict){
-		return propagateTheory(conflict);
+		bool ret = propagateTheory(conflict);
+		assert(ret);
+		return ret;
 	}
 	Lit decideTheory() {
 		return lit_Undef;

@@ -51,7 +51,7 @@ public:
 	virtual void printSolution() {
 		
 	}
-	virtual void undecideTheory(Lit l) {
+	virtual void undecideTheory(Lit l, bool owner) {
 		
 	}
 	
@@ -59,7 +59,7 @@ public:
 		
 	}
 
-	virtual void enqueueTheory(Lit l) {
+	virtual void enqueueTheory(Lit l, bool owner) {
 
 	}
 

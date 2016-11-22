@@ -277,6 +277,13 @@ struct Point {
 		}
 		return ret;
 	}
+	T operator *(const Point<D, T>& other) const {
+		T ret = T(0);
+		for (int i = 0; i < D; i++) {
+			ret += vector[i] * other.vector[i];
+		}
+		return ret;
+	}
 	Point<D, T> operator /(const T & scalar) const {
 		Point<D, T> ret;
 		for (int i = 0; i < D; i++) {
@@ -306,21 +313,22 @@ struct Plane {
 	}
 
 	bool contains(Point<D,T>* p) {
-		return true;
+		Point<D,T> norm = *vector - *point;
+		Point<D,T> deltaP = *p - *point;
+		return (norm * deltaP) >= 0;
 	}
 };
 
 template<unsigned int D, class T>
 struct PlanePolygon {
-	std::vector<Plane<D,T>*>* edges;
+	std::vector<Plane<D,T>*> edges;
 	PlanePolygon(std::vector<Plane<D,T>*>* boundary) {
-		this->edges = new std::vector<Plane<D,T>*>();
 		for (auto plane : *boundary)
-			this->edges->emplace_back(plane);
+			this->edges.emplace_back(plane);
 	}
 
 	bool contains(Point<D,T>* p) {
-		for (auto plane : *edges) {
+		for (auto plane : edges) {
 			if (!plane->contains(p))
 				return false;
 		}
