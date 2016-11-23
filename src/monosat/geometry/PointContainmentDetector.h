@@ -149,8 +149,8 @@ private:
 		Var v = theory->shapeToVar[rootIndex];
 		if (v != var_Undef && (theory->assigns[v] != l_Undef)) {
 			Lit rootLit = mkLit(v,theory->assigns[v] == l_True);
-			if (cache[rootIndex] && !sign(rootLit)) {
-				// Simplest clause is to shut this node off.
+			if (cache[rootIndex] && sign(rootLit)) {
+				// Simplest clause is to turn this node on.
 				conflict.push(~rootLit);
 				return;
 			}
@@ -240,13 +240,13 @@ public:
 	bool propagate(vec<Lit> & conflict) {
 		if (l == lit_Undef)
 			return true;
-		if (getCacheValue(shape, &(theory->under_csg), under_cache) && !sign(l)) {
+		if (getCacheValue(shape, &(theory->under_csg), under_cache) && sign(l)) {
 			// Build a clause that explains why the point is contained in the under approximation
 			learnNegativeClause(shape, &(theory->under_csg), conflict, under_cache);
 			conflict.push(~l);
 			return false;
-		} else if (!getCacheValue(shape, &(theory->over_csg), over_cache) && sign(l)) {
-			// Build a clause that explains why the point isn't contained in the over approximation
+		} else if (!getCacheValue(shape, &(theory->over_csg), over_cache) && !sign(l)) {
+			// Build a clause that forces the point to be contained
 			learnPositiveClause(shape, &(theory->over_csg), conflict, over_cache);
 			conflict.push(~l);
 			return false;

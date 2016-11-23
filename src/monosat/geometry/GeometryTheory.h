@@ -145,7 +145,7 @@ public:
 			if (vars[var(l)].isPredicate) {
 				detectors[vars[var(l)].index]->undecideTheory(l, true);
 			} else {
-				if (sign(l)) 
+				if (!sign(l))
 					under_csg.updateBoolean(false, vars[var(l)].index);
 				else 
 					over_csg.updateBoolean(true, vars[var(l)].index);
@@ -181,11 +181,11 @@ public:
 		//decisionLevel++;
 	}
 	void enqueueTheory(Lit l) {
-		assigns[var(l)] = sign(l) ? l_True : l_False;
+		assigns[var(l)] = !sign(l) ? l_True : l_False;
 		if (vars[var(l)].isPredicate) {
 			detectors[vars[var(l)].index]->enqueueTheory(l, true);
 		} else {
-				if (sign(l)) 
+				if (!sign(l))
 					under_csg.updateBoolean(true, vars[var(l)].index);
 				else 
 					over_csg.updateBoolean(false, vars[var(l)].index);

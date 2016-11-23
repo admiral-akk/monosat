@@ -1,6 +1,6 @@
-c this is a cnf with 4 Boolean variables and 1 clauses
+c this is a cnf with 2 Boolean variables and 2 clauses
 c
-p cnf 2 1
+p cnf 2 2
 c
 c some clauses in CNF format
 c
