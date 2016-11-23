@@ -203,7 +203,7 @@ class GeometryParser: public Parser<B, Solver> {
 		right = parseInt(in); 
 		right = shapeNameMap[csgName][right];
 		name = parseInt(in); 
-		varName = parseInt(in); 
+		varName = parseInt(in) - 1;
 		if (varName == -1) {
 			shapeNameMap[csgName][name] = geometryTheories[csgName]->addShape(left, right, type);
 		} else {
@@ -236,7 +236,7 @@ class GeometryParser: public Parser<B, Solver> {
 		point = pointNameMap[csgName][point];
 		shape = parseInt(in); 
 		shape = shapeNameMap[csgName][shape];
-		varName = parseInt(in); 
+		varName = parseInt(in) - 1;
 		varName = mapVar(S,varName);
 		geometryTheories[csgName]->addShapeContainsPoint(shape, point, varName);
 	}
