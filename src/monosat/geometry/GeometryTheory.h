@@ -18,8 +18,6 @@
 #ifndef GEOMETRY_THEORY_H_
 #define GEOMETRY_THEORY_H_
 
-template<unsigned int D, class T>
-class GeometryTheorySolver;
 #include "monosat/utils/System.h"
 #include "monosat/core/Theory.h"
 #include "monosat/core/Config.h"
@@ -37,7 +35,8 @@ class GeometryTheorySolver;
 #include <cstdio>
 #endif
 
- using namespace Monosat;
+using namespace Monosat;
+
 namespace Monosat {
 
 template<unsigned int D = 2, class T = int>
@@ -69,9 +68,9 @@ template<unsigned int D = 2, class T = int>
 
  	vec<lbool> assigns;
  	vec<VarData> vars;
- 	vec<int> shapeToVar;
+ 	vec<Var> shapeToVar;
 
-	struct Trail {
+	/*struct Trail {
 		int level = -1;
 		Var prev_var=var_Undef;
 		Var next_var=var_Undef;
@@ -79,21 +78,17 @@ template<unsigned int D = 2, class T = int>
 
 	vec<Trail> trail;
 	Var trailEnd;
-	int decisionLevel;
+	int decisionLevel;*/
 
 	int theory_index=0;
 
-	void printAssignments() {
-		for (int i = 0; i < assigns.size(); i++)
-			std::cout << i << ": " << (assigns[i] == l_True) << "\n";
-	}
 public:
 
 	GeometryTheorySolver(Solver * S_, int _id = -1) :
 	S(S_), id(_id) {
 		rnd_seed = opt_random_seed;
-		trailEnd = var_Undef;
-		decisionLevel = 0;
+		//trailEnd = var_Undef;
+		//decisionLevel = 0;
 	}
 	
 	~GeometryTheorySolver() {
@@ -163,30 +158,30 @@ public:
 	}
 
 	void backtrackAssign(Var v){
-			if (vars[v].isPredicate) {
+			/*if (vars[v].isPredicate) {
 				detectors[vars[v].index]->undecideTheory(mkLit(v,assigns[v]==l_True), true);
 			} else {
 				for (auto * d : detectors) {
 					d->undecideTheory(mkLit(v,assigns[v] == l_True), false);
 				}
-			}
+			}*/
 		}
 
 	void backtrackUntil(int untilLevel) {
-		while (trailEnd != var_Undef && trail[trailEnd].level > untilLevel) {
+		/*while (trailEnd != var_Undef && trail[trailEnd].level > untilLevel) {
 			trail[trailEnd].next_var = var_Undef;
 			undecideTheory(mkLit(trailEnd,assigns[trailEnd] == l_True));
 			assigns[trailEnd] = l_Undef;
 			trailEnd = trail[trailEnd].prev_var;
 		}
-		decisionLevel = untilLevel;
+		decisionLevel = untilLevel;*/
 		return;
 	}
 	inline void newDecisionLevel() {
-		decisionLevel++;
+		//decisionLevel++;
 	}
 	void enqueueTheory(Lit l) {
-		assigns[var(l)] = sign(l) ? l_False : l_True;
+		assigns[var(l)] = sign(l) ? l_True : l_False;
 		if (vars[var(l)].isPredicate) {
 			detectors[vars[var(l)].index]->enqueueTheory(l, true);
 		} else {
@@ -277,6 +272,7 @@ public:
 		vars[v].index = detector;
 		vars[v].solverVar = solverVar;
 
+
 		assigns.push(l_Undef);
 
 		if (connectToTheory) {
@@ -305,9 +301,14 @@ public:
 			boundary->emplace_back(planes[index]);
 		}
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
-		over_csg.shapes.emplace_back(new Node<D,T>(p));
-		under_csg.shapes.emplace_back(new Node<D,T>(p));
-		return under_csg.shapes.size() - 1;
+		int n = over_csg.shapes.size();
+		over_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
+		under_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
+
+		shapeToVar.growTo(n+1);
+		shapeToVar[n] = var_Undef;
+
+		return n;
 	}
 
 	int addConditionalPrimative(vec<int>* planeIndexVector, Var outerVar = var_Undef) {
@@ -318,40 +319,57 @@ public:
 			boundary->emplace_back(planes[index]);
 		}
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
-		over_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(outerVar,true)));
-		under_csg.shapes.emplace_back(new Node<D,T>(p,mkLit(outerVar,false)));
-		return under_csg.shapes.size() - 1;
+		int n = over_csg.shapes.size();
+		over_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
+		under_csg.shapes.emplace_back(new Node<D,T>(p,false,n));
+
+		shapeToVar.growTo(n+1);
+		shapeToVar[n] = v;
+
+		return n;
 	}
 	
 	int addShape(int AIndex, int BIndex, int type) {
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
-		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),over_csg.getNode(BIndex),type));
-		over_csg.getNode(AIndex)->parentVector->push_back(over_csg.shapes[n]);
-		over_csg.getNode(BIndex)->parentVector->push_back(over_csg.shapes[n]);
-		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type));
-		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
-		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
-		return under_csg.shapes.size() - 1;
+		over_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,true, n));
+		over_csg.getNode(AIndex)->parentVector->push_back(n);
+		over_csg.getNode(BIndex)->parentVector->push_back(n);
+		under_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type, true,n));
+		under_csg.getNode(AIndex)->parentVector->push_back(n);
+		under_csg.getNode(BIndex)->parentVector->push_back(n);
+
+		shapeToVar.growTo(n+1);
+		shapeToVar[n] = var_Undef;
+
+		return n;
 	}
 	
 	int addConditionalShape(int AIndex, int BIndex, int type, Var outerVar = var_Undef) {
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
 		Var v = newVar(outerVar, n, false, true);
-		over_csg.shapes.push_back(new Node<D,T>(over_csg.getNode(AIndex),over_csg.getNode(BIndex),type,mkLit(outerVar,true)));
-		over_csg.getNode(AIndex)->parentVector->push_back(over_csg.shapes[n]);
-		over_csg.getNode(BIndex)->parentVector->push_back(over_csg.shapes[n]);
-		under_csg.shapes.push_back(new Node<D,T>(under_csg.getNode(AIndex),under_csg.getNode(BIndex),type,mkLit(outerVar,false)));
-		under_csg.getNode(AIndex)->parentVector->push_back(under_csg.shapes[n]);
-		under_csg.getNode(BIndex)->parentVector->push_back(under_csg.shapes[n]);
-		return under_csg.shapes.size() - 1;
+		over_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,true,n));
+		over_csg.getNode(AIndex)->parentVector->push_back(n);
+		over_csg.getNode(BIndex)->parentVector->push_back(n);
+		under_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,false,n));
+		under_csg.getNode(AIndex)->parentVector->push_back(n);
+		under_csg.getNode(BIndex)->parentVector->push_back(n);
+
+		shapeToVar.growTo(n+1);
+		shapeToVar[n] = v;
+
+		return n;
 	}
 	
 	void addShapeContainsPoint(int shape, int point, Var outerVar = var_Undef) {
 		Var v = newVar(outerVar, detectors.size(), true, true);
-		PointContainmentDetector<D,T>* det = new PointContainmentDetector<D,T>(under_csg.getNode(shape), over_csg.getNode(shape), &under_csg, &over_csg, points[point], lit_Undef);
+		PointContainmentDetector<D,T>* det = new PointContainmentDetector<D,T>(this, shape, points[point], lit_Undef);
 		detectors.emplace_back(det);
+	}
+
+	int getShape(Lit l) {
+		return vars[var(l)].index;
 	}
 
 	};

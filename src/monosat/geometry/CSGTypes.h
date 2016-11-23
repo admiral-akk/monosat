@@ -15,25 +15,17 @@ template<unsigned int D, class T>
 
  	public:
 
- 		Node(PlanePolygon<D,T>* planePolygon) {
+ 		Node(PlanePolygon<D,T>* planePolygon, bool active, int name) {
  			this->type = Primative;
+ 			this->active = active;
  			this->p = planePolygon;
- 			this->l = lit_Undef;
- 			this->left = NULL;
- 			this->right = NULL;
- 			this->parentVector = new std::vector<Node<D,T>*>();
+ 			this->name = name;
+ 			this->left = -1;
+ 			this->right = -1;
+ 			this->parentVector = new std::vector<int>();
  		}
 
- 		Node(PlanePolygon<D,T>* planePolygon, Lit active) {
- 			this->type = Primative;
- 			this->l = active;
- 			this->p = planePolygon;
- 			this->left = NULL;
- 			this->right = NULL;
- 			this->parentVector = new std::vector<Node<D,T>*>();
- 		}
-
- 		Node(Node<D,T>* A, Node<D,T>* B, int typeInt) {
+ 		Node(int A, int B, int typeInt, bool active, int name) {
 			nodeType type;
 			switch (typeInt) {
 				case 0:
@@ -49,46 +41,25 @@ template<unsigned int D, class T>
 					break;
 			}
  			this->type = type;
- 			this->l = lit_Undef;
+ 			this->active = active;
+ 			this->name = name;
  			this->p = NULL;
  			this->left = A;
  			this->right = B;
- 			this->parentVector = new std::vector<Node<D,T>*>();
- 		}
-
- 		Node(Node<D,T>* A, Node<D,T>* B, int typeInt, Lit active) {
-			nodeType type;
-			switch (typeInt) {
-				case 0:
-					type = Union;
-					break;
-				case 1: 
-					type = Intersection;
-					break;
-				case 2:
-					type = Difference;
-					break;
-				default:
-					break;
-			}
- 			this->type = type;
- 			this->l = active;
- 			this->p = NULL;
- 			this->left = A;
- 			this->right = B;
- 			this->parentVector = new std::vector<Node<D,T>*>();
+ 			this->parentVector = new std::vector<int>();
  		}
 
 		// Determines the primative or operation.
  		nodeType type;
- 		// Local var
- 		Lit l;
+ 		// Needed to get variable from theory
+ 		int name;
+ 		// Determines if node is active
+ 		bool active;
 		// If type == Primative, p will point to the primative.
  		PlanePolygon<D, T>* p;
 
- 		Node<D,T>* left;
- 		Node<D,T>* right;
- 		std::vector<Node<D,T>*>* parentVector;
+ 		int left, right;
+ 		std::vector<int>* parentVector;
  		//BoundingBox<D,T> box;
  	};
 

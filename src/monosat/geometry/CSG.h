@@ -63,8 +63,7 @@ template<unsigned int D, class T>
  	}
 
  	void updateBoolean(bool value, int shapeIndex) {
- 		Lit l = shapes[shapeIndex]->l;
- 		shapes[shapeIndex]->l = mkLit(var(l), value);
+ 		shapes[shapeIndex]->active = value;
  	}
 };
 #endif /* CSG_H_ */
