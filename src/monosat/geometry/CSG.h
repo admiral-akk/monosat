@@ -50,7 +50,7 @@ template<unsigned int D, class T>
 	*/
 
  public:
- 	std::vector<Node<D,T>*> shapes;
+ 	vec<Node<D,T>> shapes;
 
  	CSG() {
  	}
@@ -59,11 +59,41 @@ template<unsigned int D, class T>
  	// Update Boolean
  	// 
  	Node<D,T>* getNode(int index) {
- 		return shapes[index];
+ 		return &shapes[index];
  	}
 
  	void updateBoolean(bool value, int shapeIndex) {
- 		shapes[shapeIndex]->active = value;
+ 		shapes[shapeIndex].active = value;
+ 	}
+
+ 	void addPrimative(PlanePolygon<D,T>* p, bool active, int index) {
+ 		shapes.growTo(index+1);
+ 		shapes[index].p = p;
+ 		shapes[index].active = active;
+ 	}
+
+
+ 	void addShape(int leftIndex, int rightIndex, int type, bool active, int index) {
+ 		shapes.growTo(index+1);
+ 		shapes[index].left = leftIndex;
+ 		shapes[index].right = rightIndex;
+ 		switch (type) {
+ 		case 0:
+ 	 		shapes[index].type = Union;
+ 	 		break;
+ 		case 1:
+ 	 		shapes[index].type = Intersection;
+ 	 		break;
+ 		case 2:
+ 	 		shapes[index].type = Difference;
+ 	 		break;
+ 		default:
+ 	 		break;
+ 		}
+ 		shapes[index].active = active;
+ 		shapes[leftIndex].parentVector.push(index);
+ 		shapes[rightIndex].parentVector.push(index);
+
  	}
 };
 #endif /* CSG_H_ */

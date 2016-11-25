@@ -55,6 +55,9 @@ template<unsigned int D = 2, class T = int>
 
  	CSG<D, T> under_csg;
  	CSG<D, T> over_csg;
+
+ 	vec<bool> polarity;
+
  	std::vector<Point<D,T>*> points;
  	std::vector<Plane<D,T>*> planes;
 
@@ -138,17 +141,41 @@ public:
 			c[i] = toSolver(c[i]);
 		}
 	}
+
+	vec<Lit> tmp_clause;
+
+	void makeEqual(Lit l1, Lit l2) {
+		Lit o1 = toSolver(l1);
+		Lit o2 = toSolver(l2);
+		tmp_clause.clear();
+		tmp_clause.push(~o1);
+		tmp_clause.push(o2);
+		S->addClauseSafely(tmp_clause);
+		tmp_clause.clear();
+		tmp_clause.push(o1);
+		tmp_clause.push(~o2);
+		S->addClauseSafely(tmp_clause);
+	}
+	void makeEqualInSolver(Lit o1, Lit o2) {
+		tmp_clause.clear();
+		tmp_clause.push(~o1);
+		tmp_clause.push(o2);
+		S->addClauseSafely(tmp_clause);
+		tmp_clause.clear();
+		tmp_clause.push(o1);
+		tmp_clause.push(~o2);
+		S->addClauseSafely(tmp_clause);
+	}
 	inline int level(Var v)const {
 		return S->level(toSolver(v));
 	}
 	void undecideTheory(Lit l){
+			std::cout << "Dequeue: " << toInt(l) << std::endl;
 			if (vars[var(l)].isPredicate) {
 				detectors[vars[var(l)].index]->undecideTheory(l, true);
 			} else {
-				if (!sign(l))
-					under_csg.updateBoolean(false, vars[var(l)].index);
-				else 
-					over_csg.updateBoolean(true, vars[var(l)].index);
+				under_csg.updateBoolean(!polarity[vars[var(l)].index], vars[var(l)].index);
+				over_csg.updateBoolean(polarity[vars[var(l)].index], vars[var(l)].index);
 				
 				for (auto * d : detectors) {
 					d->undecideTheory(l, false);
@@ -181,15 +208,24 @@ public:
 		//decisionLevel++;
 	}
 	void enqueueTheory(Lit l) {
+		std::cout << "Enqueue: " << toInt(l) << std::endl;
 		assigns[var(l)] = !sign(l) ? l_True : l_False;
 		if (vars[var(l)].isPredicate) {
 			detectors[vars[var(l)].index]->enqueueTheory(l, true);
 		} else {
-				if (!sign(l))
-					under_csg.updateBoolean(true, vars[var(l)].index);
-				else 
-					over_csg.updateBoolean(false, vars[var(l)].index);
-
+				if (sign(l)) {
+					if (polarity[vars[var(l)].index]) {
+						over_csg.updateBoolean(false, vars[var(l)].index);
+					} else {
+						under_csg.updateBoolean(false, vars[var(l)].index);
+					}
+				} else {
+					if (polarity[vars[var(l)].index]) {
+						under_csg.updateBoolean(true, vars[var(l)].index);
+					} else {
+						over_csg.updateBoolean(true, vars[var(l)].index);
+					}
+				}
 			for (auto * d : detectors) {
 				d->enqueueTheory(l, false);
 			}
@@ -198,6 +234,11 @@ public:
 	bool propagateTheory(vec<Lit> & conflict) {
 		for (auto * d : detectors) {
 			if (!d->propagate(conflict)) {
+				std::cout << "Conflict:  ";
+				for (int i = 0; i < conflict.size(); i++) {
+					std::cout << toInt(conflict[i]) << " ";
+				}
+				std::cout << std::endl;
 				toSolver(conflict);
 				return false;
 			}
@@ -251,7 +292,28 @@ public:
 	void writeTheoryWitness(std::ostream& write_to) {
 		//do nothing
 	}
-	void preprocess(){
+
+	bool getPolarity(int index) {
+		std::cout << over_csg.getNode(index)->parentVector.size() << std::endl;
+		if (!over_csg.getNode(index)->parentVector.size()) {
+			return true;
+		}
+		int parentIndex = over_csg.getNode(index)->parentVector[0];
+		return !(over_csg.getNode(parentIndex)->type == Difference && over_csg.getNode(parentIndex)->right == index) ? polarity[parentIndex] : !polarity[parentIndex];
+	}
+
+	void initPolarity() {
+		for (int i = polarity.size()-1; i > -1; i--) {
+			polarity[i] = getPolarity(i);
+			if (shapeToVar[i] != var_Undef) {
+				over_csg.shapes[i].active = polarity[i];
+				under_csg.shapes[i].active = !polarity[i];
+			}
+		}
+	}
+
+	void preprocess() {
+		initPolarity();
 		for (auto * d : detectors) {
 			d->preprocess();
 		}
@@ -302,8 +364,10 @@ public:
 		}
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
 		int n = over_csg.shapes.size();
-		over_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
-		under_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
+		over_csg.addPrimative(p,true,n);
+		under_csg.addPrimative(p,true,n);
+
+		polarity.growTo(n+1);
 
 		shapeToVar.growTo(n+1);
 		shapeToVar[n] = var_Undef;
@@ -320,8 +384,10 @@ public:
 		}
 		PlanePolygon<D,T>* p = new PlanePolygon<D,T>(boundary);
 		int n = over_csg.shapes.size();
-		over_csg.shapes.emplace_back(new Node<D,T>(p,true,n));
-		under_csg.shapes.emplace_back(new Node<D,T>(p,false,n));
+		over_csg.addPrimative(p,true,n);
+		under_csg.addPrimative(p,false,n);
+
+		polarity.growTo(n+1);
 
 		shapeToVar.growTo(n+1);
 		shapeToVar[n] = v;
@@ -332,12 +398,10 @@ public:
 	int addShape(int AIndex, int BIndex, int type) {
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
-		over_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,true, n));
-		over_csg.getNode(AIndex)->parentVector->push_back(n);
-		over_csg.getNode(BIndex)->parentVector->push_back(n);
-		under_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type, true,n));
-		under_csg.getNode(AIndex)->parentVector->push_back(n);
-		under_csg.getNode(BIndex)->parentVector->push_back(n);
+		over_csg.addShape(AIndex,BIndex,type,true, n);
+		under_csg.addShape(AIndex,BIndex,type, true,n);
+
+		polarity.growTo(n+1);
 
 		shapeToVar.growTo(n+1);
 		shapeToVar[n] = var_Undef;
@@ -349,12 +413,10 @@ public:
 		assert(-1 < type && type < 3);
 		int n = over_csg.shapes.size();
 		Var v = newVar(outerVar, n, false, true);
-		over_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,true,n));
-		over_csg.getNode(AIndex)->parentVector->push_back(n);
-		over_csg.getNode(BIndex)->parentVector->push_back(n);
-		under_csg.shapes.push_back(new Node<D,T>(AIndex,BIndex,type,false,n));
-		under_csg.getNode(AIndex)->parentVector->push_back(n);
-		under_csg.getNode(BIndex)->parentVector->push_back(n);
+		over_csg.addShape(AIndex, BIndex, type, true, n);
+		under_csg.addShape(AIndex, BIndex, type, true, n);
+
+		polarity.growTo(n+1);
 
 		shapeToVar.growTo(n+1);
 		shapeToVar[n] = v;

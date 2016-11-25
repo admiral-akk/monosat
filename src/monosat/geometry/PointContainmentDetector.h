@@ -87,11 +87,14 @@ private:
 		default:
 			break;
 		}
+		std::cout << "Shape " << rootIndex << ": " << cache[rootIndex] << std::endl;
 	}
 
 	void initialize() {
-		initialize(shape, &(theory->under_csg), under_cache);
-		initialize(shape, &(theory->over_csg), over_cache);
+		std::cout << "UNDER\n";
+		initialize(shape, getUnderCSG(), under_cache);
+		std::cout << "OVER\n";
+		initialize(shape, getOverCSG(), over_cache);
 	}
 
 	//
@@ -106,7 +109,7 @@ private:
 		initialize(rootIndex, csg, cache);
 		if (old == cache[rootIndex])
 			return;
-		for (auto nodeIndex : *(root->parentVector))
+		for (auto nodeIndex : root->parentVector)
 			update(nodeIndex, csg, cache);
 	}
 
@@ -143,13 +146,13 @@ private:
 	}
 
 
-	// Learn clause that must be true for the point to be contained
+	// Build a clause that is true if the point is contained
 	void learnPositiveClause(int rootIndex, CSG<D,T>* csg, vec<Lit>& conflict, std::map<int,bool>& cache) {
 		Node<D,T>* root = csg->getNode(rootIndex);
 		Var v = theory->shapeToVar[rootIndex];
 		if (v != var_Undef && (theory->assigns[v] != l_Undef)) {
-			Lit rootLit = mkLit(v,theory->assigns[v] == l_True);
-			if (cache[rootIndex] && sign(rootLit)) {
+			Lit rootLit = mkLit(v,theory->assigns[v] == l_False);
+			if (sign(rootLit)) {
 				// Simplest clause is to turn this node on.
 				conflict.push(~rootLit);
 				return;
@@ -181,13 +184,13 @@ private:
 		}
 	}
 
-	// Learn clause that must be true for the point to be excluded
+	// Build a clause that is true if the point is not contained
 	void learnNegativeClause(int rootIndex, CSG<D,T>* csg, vec<Lit>& conflict, std::map<int,bool>& cache) {
 		Node<D,T>* root = csg->getNode(rootIndex);
 		Var v = theory->shapeToVar[rootIndex];
 		if (v != var_Undef && (theory->assigns[v] != l_Undef)) {
-			Lit rootLit = mkLit(v,theory->assigns[v] == l_True);
-			if (cache[rootIndex] && !sign(rootLit)) {
+			Lit rootLit = mkLit(v,theory->assigns[v] == l_False);
+			if (!sign(rootLit)) {
 				// Simplest clause is to shut this node off.
 				conflict.push(~rootLit);
 				return;
@@ -237,17 +240,33 @@ public:
 		this->l = literal;
 	}
 
+	CSG<D,T>* getUnderCSG() {
+		if (!theory->polarity[shape]) {
+			return &(theory->over_csg);
+		} else {
+			return &(theory->under_csg);
+		}
+	}
+
+	CSG<D,T>* getOverCSG() {
+		if (theory->polarity[shape]) {
+			return &(theory->over_csg);
+		} else {
+			return &(theory->under_csg);
+		}
+	}
+
 	bool propagate(vec<Lit> & conflict) {
 		if (l == lit_Undef)
 			return true;
-		if (getCacheValue(shape, &(theory->under_csg), under_cache) && sign(l)) {
-			// Build a clause that explains why the point is contained in the under approximation
-			learnNegativeClause(shape, &(theory->under_csg), conflict, under_cache);
+		if (getCacheValue(shape, getUnderCSG(), under_cache) && sign(l)) {
+			// Build a clause that is true if the point is not contained
+			learnNegativeClause(shape, getUnderCSG(), conflict, under_cache);
 			conflict.push(~l);
 			return false;
-		} else if (!getCacheValue(shape, &(theory->over_csg), over_cache) && !sign(l)) {
-			// Build a clause that forces the point to be contained
-			learnPositiveClause(shape, &(theory->over_csg), conflict, over_cache);
+		} else if (!getCacheValue(shape, getOverCSG(), over_cache) && !sign(l)) {
+			// Build a clause that is true if the point is contained
+			learnPositiveClause(shape, getOverCSG(), conflict, over_cache);
 			conflict.push(~l);
 			return false;
 		}
