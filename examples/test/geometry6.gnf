@@ -1,0 +1,16 @@
+p cnf 2 2
+1 0
+2 0
+geometry 2 0
+point 0 0 1 0
+point 0 0 -1 1
+point 0 1 0 2
+point 0 -1 0 3
+point 0 0 0 4
+plane 0 0 1 0
+plane 0 1 0 1
+plane 0 3 2 2
+plane 0 2 3 3
+primative 0 4 0 1 2 3 0 1
+predicate_point_in_shape 0 4 0 2
+c SATISFIABLE
