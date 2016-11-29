@@ -68,21 +68,21 @@ private:
 				initialize(root->left, csg, cache);
 			if (!cache.count(root->right))
 				initialize(root->right, csg, cache);
-			cache[rootIndex] = getCacheValue(root->left,csg,cache) || getCacheValue(root->right,csg,cache);
+			cache[rootIndex] = (cache[root->left] || cache[root->right]) && root->active;
 			break;
 		case Intersection:
 			if (!cache.count(root->left))
 				initialize(root->left, csg, cache);
 			if (!cache.count(root->right))
 				initialize(root->right, csg, cache);
-			cache[rootIndex] = getCacheValue(root->left,csg,cache) && getCacheValue(root->right,csg,cache);
+			cache[rootIndex] = cache[root->left] && cache[root->right] && root->active;
 			break;
 		case Difference:
 			if (!cache.count(root->left))
 				initialize(root->left, csg, cache);
 			if (!cache.count(root->right))
 				initialize(root->right, csg, cache);
-			cache[rootIndex] = getCacheValue(root->left,csg,cache) && !getCacheValue(root->right,csg,cache);
+			cache[rootIndex] = cache[root->left] && !cache[root->right] && root->active;
 			break;
 		default:
 			break;
@@ -193,6 +193,8 @@ private:
 			if (!sign(rootLit)) {
 				// Simplest clause is to shut this node off.
 				conflict.push(~rootLit);
+			} else {
+				// Node is already empty.
 				return;
 			}
 		}
@@ -202,28 +204,29 @@ private:
 		case Union:
 			learnNegativeClause(root->left,csg,temp_A,cache);
 			learnNegativeClause(root->right,csg,temp_B,cache);
-			appendVector(conflict, temp_A);
-			appendVector(conflict, temp_B);
+			appendSmallerVector(conflict, temp_A, temp_B);
 			break;
 		case Intersection:
 			learnNegativeClause(root->left,csg,temp_A,cache);
 			learnNegativeClause(root->right,csg,temp_B,cache);
-			appendSmallerVector(conflict, temp_A, temp_B);
+			appendVector(conflict, temp_A);
+			appendVector(conflict, temp_B);
 			break;
 		case Difference:
 			learnNegativeClause(root->left,csg,temp_A,cache);
 			learnPositiveClause(root->right,csg,temp_B,cache);
-			appendSmallerVector(conflict, temp_A, temp_B);
+			appendVector(conflict, temp_A);
+			appendVector(conflict, temp_B);
 			break;
 		default:
 			break;
 		}
 	}
 
-	bool getCacheValue(int rootIndex, CSG<D,T>* csg, std::map<int,bool>& cache) {
-		Node<D,T>* root = csg->getNode(rootIndex);
-		return cache[rootIndex] && root->active;
-	}
+//	bool getCacheValue(int rootIndex, CSG<D,T>* csg, std::map<int,bool>& cache) {
+//		Node<D,T>* root = csg->getNode(rootIndex);
+//		return cache[rootIndex] && root->active;
+//	}
 
 
 
@@ -259,12 +262,12 @@ public:
 	bool propagate(vec<Lit> & conflict) {
 		if (l == lit_Undef)
 			return true;
-		if (getCacheValue(shape, getUnderCSG(), under_cache) && sign(l)) {
+		if (under_cache[shape] && sign(l)) {
 			// Build a clause that is true if the point is not contained
 			learnNegativeClause(shape, getUnderCSG(), conflict, under_cache);
 			conflict.push(~l);
 			return false;
-		} else if (!getCacheValue(shape, getOverCSG(), over_cache) && !sign(l)) {
+		} else if (!over_cache[shape] && !sign(l)) {
 			// Build a clause that is true if the point is contained
 			learnPositiveClause(shape, getOverCSG(), conflict, over_cache);
 			conflict.push(~l);

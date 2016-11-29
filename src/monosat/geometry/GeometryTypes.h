@@ -284,6 +284,13 @@ struct Point {
 		}
 		return ret;
 	}
+	Point<D, T> operator -(const Point<D, T>& other) const {
+		Point<D, T> ret;
+		for (int i = 0; i < D; i++) {
+			ret[i] = vector[i] - other[i];
+		}
+		return ret;
+	}
 	Point<D, T> operator /(const T & scalar) const {
 		Point<D, T> ret;
 		for (int i = 0; i < D; i++) {
@@ -313,9 +320,7 @@ struct Plane {
 	}
 
 	bool contains(Point<D,T>* p) {
-		Point<D,T> norm = *vector - *point;
-		Point<D,T> deltaP = *p - *point;
-		return (norm * deltaP) >= 0;
+		return ((*vector)*(*point - *p))/( *vector *  *vector) <= 0;
 	}
 };
 
